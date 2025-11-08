@@ -1,15 +1,8 @@
-##  TASK 0 — Insert “Current System README.md” as the first section of the report
+##  TASK 0
 
-GOAL
-Create the first section, very top of the report, literally titled:
-
-# Current System README.md
-
-This section must contain the repository’s README content (or a generated README if none exists). Do NOT print any filesystem path in the report output.
-
-INPUTS (fill if available)
-- REPO_URL: {{REPO}}
-- BASE_BRANCH: {{main}}
+INPUTS 
+- REPOSITORY: [DICKY1987/PowerShell_-deterministi_factory]@@_1
+- BASE_BRANCH: [main]
 
 INSTRUCTIONS
 1) Discover README
@@ -45,11 +38,13 @@ STANDARD SECTION ORDER (use as checklist)
 
 ## TASK 
 Analyze the provided system/framework/application and produce a **comprehensive unified architecture report** that captures both:
+
 1. **Plugin/Extension Architecture** - How the system enables extensibility
 2. **Complete Modular Architecture** - Full module hierarchy with Core/Plugin/Support tiers
 
 ## INPUT
-[REPO]
+
+[DICKY1987/PowerShell_-deterministi_factory]@@_2
 
 ## OUTPUT REQUIREMENTS
 Follow this exact template structure to produce ONE unified report containing all sections below.
@@ -892,15 +887,9 @@ Before submitting your analysis, verify:
 
 # NOW ANALYZE THIS SYSTEM:
 
-[REPO]
+[DICKY1987/PowerShell_-deterministi_factory]@@_3
 
-**System Name:** [Name of system you're analyzing]
 
-**Version/Date:** [If relevant]
-
-**Documentation Links:** [If you have specific URLs to reference]
-
-**Analysis Focus:** [Any specific areas you want emphasized]
 
 ---
 
