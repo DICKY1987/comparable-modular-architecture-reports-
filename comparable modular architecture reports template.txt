@@ -1,0 +1,257 @@
+﻿System Architecture Analysis Prompt Template
+Copy This Entire Prompt to Analyze Any System:
+
+TASK: Analyze the provided system/framework/application and produce a comprehensive modular architecture report.
+INPUT: [Paste system documentation, codebase description, architecture docs, or project description here]
+OUTPUT REQUIREMENTS: Follow this exact template structure:
+
+TEMPLATE: Modular Architecture Analysis Report
+Title Format:
+# [SYSTEM_NAME]: Complete Modular Architecture
+
+Section 1: TIER 1: CORE MODULES (Sacred/Privileged)
+For each core module, provide:
+### Module N: **[Module Name]**
+**Purpose:** [One-sentence description of what this module does]
+
+**Deliverables:**
+- `[filepath/component1]` - [Brief description]
+- `[filepath/component2]` - [Brief description]
+- `[filepath/component3]` - [Brief description]
+- [Data files, configs, schemas created/managed]
+- [Any generated artifacts]
+- [Integration points or interfaces]
+
+**Key Contracts:**
+```python
+[Show 3-5 key function/method signatures or API endpoints]
+method_name(param1: Type, param2: Type) -> ReturnType
+another_method(param: Type) -> ReturnType
+[Optional: Include schema examples if relevant]
+{
+  "example": "data structure",
+  "format": "that this module uses"
+}
+
+**Core Module Identification Criteria:**
+- Controls privileged operations (file system, database, security)
+- Cannot be disabled without breaking the system
+- Other modules depend on it
+- Handles critical data or state
+- Enforces system-wide rules or policies
+
+**Aim for 8-12 core modules**
+
+---
+
+### Section 2: TIER 2: PLUGIN/EXTENSION MODULES (Extensible/Evolvable)
+
+**For each plugin/extension module, provide:**
+
+```markdown
+### Module N: **[Module Name]**
+**Purpose:** [What this plugin/extension accomplishes]
+
+**Deliverables:**
+- `[plugin files or components]`
+- [Configuration files]
+- [Templates or schemas]
+- [Integration artifacts]
+
+**[Hook/Event Name]:** [What triggers this module]
+
+**Input Contract:**
+```json
+{
+  "expected": "input structure",
+  "parameters": "that trigger this module"
+}
+Output Contract:
+{
+  "returned": "data structure",
+  "actions": "or proposals from this module"
+}
+
+**Plugin/Extension Identification Criteria:**
+- Can be added/removed without breaking core
+- Extends functionality rather than providing foundation
+- Implements a specific feature or capability
+- May have multiple implementations for same purpose
+- Often user-configurable or optional
+
+**Aim for 6-10 plugin modules**
+
+---
+
+### Section 3: TIER 3: SUPPORT MODULES
+
+**For each support module, provide:**
+
+```markdown
+### Module N: **[Module Name]**
+**Purpose:** [What supporting function this provides]
+
+**Deliverables:**
+- `[utility files or components]`
+- [Configuration data]
+- [Supporting artifacts]
+
+**[Optional: Include schema/format examples if relevant]**
+Support Module Identification Criteria:
+* Provides utilities or helpers
+* Used by multiple other modules
+* Not directly part of core functionality
+* Often cross-cutting concerns (logging, config, testing)
+Aim for 3-6 support modules
+
+Section 4: Complete Deliverables Summary Table
+Create a comprehensive table:
+| Module | Core Files | Generated Artifacts | Config Files | Tests |
+|--------|-----------|---------------------|--------------|-------|
+| **[Module 1]** | [file1.ext, file2.ext] | [artifact1, artifact2] | [config.json] | [test_file.ext] |
+| **[Module 2]** | [file1.ext] | [generated output] | - | [test_file.ext] |
+[Continue for all modules]
+
+Section 5: Module Dependencies
+Create a dependency tree showing relationships:
+[Root Module/Orchestrator]
+├── [Dependent Module 1] ([what it provides])
+├── [Dependent Module 2] ([what it provides])
+│   └── [Sub-dependency] ([relationship])
+└── [Dependent Module 3] ([what it provides])
+
+[Another Major Module]
+├── [Dependencies]
+└── [How they interact]
+
+[Plugin Family]
+├── [Shared dependencies]
+└── [Integration points]
+
+Section 6: Integration Points
+External Tool Integration:
+* [Tool/Service Name] - [How it's integrated and by which modules]
+* [Tool/Service Name] - [Purpose and calling modules]
+* [Tool/Service Name] - [Integration pattern]
+Data Flows: Describe 3-5 key scenarios showing data movement:
+1. **[Scenario Name]** → [Step 1] → [Step 2] → [Step 3] → [Step 4] → [Final outcome]
+2. **[Scenario Name]** → [Flow description]
+3. **[Scenario Name]** → [Flow description]
+
+Section 7: Architecture Quality Assessment
+End with a checklist evaluating the modular architecture:
+This modular architecture ensures:
+- ✅/❌ Clear separation of concerns
+- ✅/❌ Each module has single responsibility  
+- ✅/❌ Core protected from plugin failures
+- ✅/❌ Extensibility without core changes
+- ✅/❌ Complete audit/observability capability
+- ✅/❌ Deterministic and testable behavior
+
+ANALYSIS GUIDELINES:
+1. Module Identification Strategy
+* Start with data flow: Follow how data enters, transforms, and exits
+* Identify boundaries: Look for clear interfaces or APIs
+* Find privileged operations: What requires special access?
+* Spot extensibility points: Where can users add functionality?
+* Look for separation patterns: Services, layers, plugins, adapters
+2. Classification Rules
+* CORE = Can't remove without system collapse
+* PLUGIN = Optional, adds features, follows extension pattern
+* SUPPORT = Utilities, helpers, cross-cutting concerns
+3. Deliverables Extraction
+* Code files: Actual implementation files with paths
+* Generated artifacts: What the module creates/manages
+* Configs: What settings it reads/writes
+* Tests: Verification components
+* Schemas: Data structures or contracts
+4. Contract Documentation
+* Show 3-5 most important interfaces per module
+* Use actual code syntax (Python, TypeScript, etc.) or pseudocode
+* Include parameter types and return types
+* For REST APIs: show endpoint signatures
+* For event-driven: show event names and payloads
+5. Maintain Consistency
+* Use same naming conventions throughout
+* Keep module numbering sequential
+* Use consistent formatting for code blocks
+* Apply same level of detail to each module
+6. Integration Focus
+* Show how modules interact, not just what they do
+* Identify data flows between modules
+* Highlight external dependencies
+* Note any circular dependencies (architectural smell)
+
+EXAMPLE SNIPPET (for reference):
+### Module 1: **Authentication Manager**
+**Purpose:** Handles user authentication, session management, and token validation
+
+**Deliverables:**
+- `core/auth/auth_manager.py` - Main authentication logic
+- `core/auth/token_service.py` - JWT token generation/validation
+- `core/auth/session_store.py` - Session persistence
+- `.auth/sessions.db` - SQLite session database
+- Auth configuration schema (JSON Schema)
+- Token refresh endpoint
+
+**Key Contracts:**
+```python
+authenticate(username: str, password: str) -> AuthResult
+validate_token(token: str) -> TokenClaims | None
+refresh_session(session_id: str) -> Session
+revoke_access(user_id: str, reason: str) -> bool
+Token Schema:
+{
+  "user_id": "string",
+  "roles": ["string"],
+  "expires_at": "iso8601-timestamp",
+  "refresh_token": "string"
+}
+
+---
+
+## OUTPUT CHECKLIST:
+
+Before submitting your analysis, verify:
+
+- [ ] All modules numbered sequentially
+- [ ] Each module has Purpose + Deliverables + Contracts
+- [ ] Core/Plugin/Support tiers clearly separated
+- [ ] Summary table includes all modules
+- [ ] Dependency tree shows relationships
+- [ ] Integration points documented
+- [ ] 3-5 data flow scenarios described
+- [ ] Quality assessment completed
+- [ ] Consistent formatting throughout
+- [ ] Code blocks properly formatted with syntax highlighting
+
+---
+
+## NOW ANALYZE THIS SYSTEM:
+
+[PASTE SYSTEM DOCUMENTATION, ARCHITECTURE DESCRIPTION, OR PROJECT DETAILS HERE]
+
+---
+
+**END OF TEMPLATE**
+
+---
+
+## Usage Instructions:
+
+1. **Copy everything from "TASK:" to "END OF TEMPLATE"**
+2. **Paste into your AI conversation**
+3. **Replace the [PASTE SYSTEM...] section with your target system's docs**
+4. **Run the analysis**
+5. **Compare outputs across different systems**
+
+## Tips for Best Results:
+
+- **More input = better analysis**: Provide architecture docs, README, code structure
+- **Specify system type**: "microservices", "monolithic", "event-driven", "plugin-based"
+- **Include scale info**: Help AI understand which modules are truly "core"
+- **Request clarification**: If output unclear, ask AI to explain module boundaries
+- **Iterate**: Run 2-3 times with refined input for best results
+
+This will produce consistent, comparable modular architecture reports template you analyze.
+

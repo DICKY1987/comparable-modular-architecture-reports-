@@ -1,0 +1,604 @@
+Plugin Architecture Analysis Prompt Template
+Copy This Entire Prompt to Analyze Any Plugin System:
+
+TASK: Analyze the provided system's plugin/extension architecture and produce a comprehensive plugin architecture report.
+FOCUS: How the system enables extensibility through plugins, extensions, modules, or similar patterns.
+INPUT: [Paste system documentation, plugin guides, extension architecture, or project description here]
+OUTPUT REQUIREMENTS: Follow this exact template structure:
+
+TEMPLATE: Plugin Architecture Analysis Report
+Title Format:
+# [SYSTEM_NAME]: Plugin Architecture Deep Dive
+
+Section 1: PLUGIN SYSTEM OVERVIEW
+1.1 Architecture Summary
+markdown**System Type:** [Event-driven / Hook-based / Interface-based / Service-oriented]
+**Plugin Discovery:** [How plugins are found: directory scanning / manifest registration / API registration]
+**Loading Strategy:** [When plugins load: startup / lazy / on-demand]
+**Isolation Level:** [Process-level / Namespace / Same-process / Sandboxed]
+**Communication Pattern:** [Direct calls / Event bus / Message queue / RPC]
+**Core-Plugin Boundary:** [What core controls vs what plugins control]
+1.2 Plugin Lifecycle
+markdown**Lifecycle Stages:**
+1. **Discovery** - [How system finds plugins]
+2. **Validation** - [What checks happen before loading]
+3. **Loading** - [How plugin code is initialized]
+4. **Registration** - [How plugin declares capabilities]
+5. **Activation** - [When plugin starts handling events/requests]
+6. **Deactivation** - [How plugins are disabled/unloaded]
+7. **Cleanup** - [Resource cleanup process]
+
+**Lifecycle Events/Hooks:**
+- `[event_name]` - [When it fires, what plugins can do]
+- `[event_name]` - [Trigger and purpose]
+- `[event_name]` - [Trigger and purpose]
+
+Section 2: PLUGIN EXTENSION POINTS
+2.1 Available Hooks/Events
+Create a comprehensive table of all extension points:
+markdown| Hook/Event Name | Trigger Condition | Plugin Receives | Plugin Returns | Can Block? | Examples |
+|-----------------|-------------------|-----------------|----------------|------------|----------|
+| **[EventName]** | [When it fires] | [Input data] | [Output format] | Yes/No | [Use case] |
+| **[EventName]** | [When it fires] | [Input data] | [Output format] | Yes/No | [Use case] |
+| **[EventName]** | [When it fires] | [Input data] | [Output format] | Yes/No | [Use case] |
+2.2 Hook Priority & Ordering
+markdown**Execution Order Control:**
+- [How plugins specify execution order: priority numbers / dependencies / registration order]
+- [Default ordering strategy]
+- [Conflict resolution when multiple plugins handle same hook]
+
+**Examples:**
+```[language]
+[Show code example of setting plugin priority/order]
+```
+
+Section 3: PLUGIN STRUCTURE & ANATOMY
+3.1 Required Plugin Artifacts
+markdown**Mandatory Files:**
+- `[filename]` - [Purpose and format]
+- `[filename]` - [Purpose and format]
+- `[filename]` - [Purpose and format]
+
+**Optional Files:**
+- `[filename]` - [Purpose and format]
+- `[filename]` - [Purpose and format]
+
+**Directory Structure:**
+```
+[plugin-name]/
+├── [file1]          # [Purpose]
+├── [file2]          # [Purpose]
+├── [directory]/
+│   └── [file3]      # [Purpose]
+└── [file4]          # [Purpose]
+```
+3.2 Plugin Manifest/Descriptor
+markdown**Manifest Format:** [JSON / YAML / TOML / Code annotation]
+
+**Required Fields:**
+```[format]
+{
+  "[field]": "[purpose and type]",
+  "[field]": "[purpose and type]",
+  "[field]": "[purpose and type]"
+}
+```
+
+**Example Real Manifest:**
+```[format]
+[Paste actual example from system]
+```
+3.3 Plugin Implementation Pattern
+markdown**Implementation Style:** [Class-based / Function-based / Declarative / Mixed]
+
+**Minimal Plugin Example:**
+```[language]
+[Show smallest viable plugin that demonstrates the pattern]
+```
+
+**Full-Featured Plugin Example:**
+```[language]
+[Show plugin with multiple hooks, configuration, lifecycle methods]
+```
+
+Section 4: PLUGIN CONTRACTS & INTERFACES
+4.1 Core Contracts
+For each major contract/interface:
+markdown#### Contract: **[InterfaceName]**
+
+**Purpose:** [What this contract enables]
+
+**Required Methods/Functions:**
+```[language]
+[method_signature](params) -> return_type  # [What it does]
+[method_signature](params) -> return_type  # [What it does]
+[method_signature](params) -> return_type  # [What it does]
+```
+
+**Input Schema:**
+```json
+{
+  "field": "type and constraints",
+  "field": "type and constraints"
+}
+```
+
+**Output Schema:**
+```json
+{
+  "field": "type and constraints",
+  "field": "type and constraints"
+}
+```
+
+**Validation Rules:**
+- [Rule 1]
+- [Rule 2]
+- [Rule 3]
+
+**Example Implementation:**
+```[language]
+[Show code implementing this contract]
+```
+4.2 Communication Protocols
+markdown**Plugin → Core:**
+- [How plugins call core functionality]
+- [Available core APIs/services]
+- [Permission model]
+
+**Core → Plugin:**
+- [How core invokes plugins]
+- [Error handling strategy]
+- [Timeout/resource limits]
+
+**Plugin → Plugin:**
+- [Can plugins communicate directly? How?]
+- [Shared state mechanisms]
+- [Event forwarding patterns]
+
+Section 5: PLUGIN CAPABILITIES & PERMISSIONS
+5.1 Permission Model
+markdown**Permission Levels:**
+- **[Level]**: [What it can access/modify]
+- **[Level]**: [What it can access/modify]
+- **[Level]**: [What it can access/modify]
+
+**Capability Declarations:**
+```[format]
+[How plugins declare what they need]
+```
+
+**Restrictions:**
+- ❌ [What plugins CANNOT do]
+- ❌ [What plugins CANNOT do]
+- ❌ [What plugins CANNOT do]
+
+**Sandboxing/Isolation:**
+- [Security boundaries]
+- [Resource limits]
+- [Blast radius control]
+5.2 Core Services Available to Plugins
+markdown| Service | Purpose | Access Pattern | Permission Required |
+|---------|---------|----------------|---------------------|
+| **[ServiceName]** | [What it provides] | [How to call] | [Level needed] |
+| **[ServiceName]** | [What it provides] | [How to call] | [Level needed] |
+| **[ServiceName]** | [What it provides] | [How to call] | [Level needed] |
+
+Section 6: PLUGIN VALIDATION & QUALITY GATES
+6.1 Pre-Load Validation
+markdown**Validation Checks:**
+1. **[Check Name]** - [What it validates]
+   - Pass criteria: [Requirements]
+   - Fail action: [What happens]
+
+2. **[Check Name]** - [What it validates]
+   - Pass criteria: [Requirements]
+   - Fail action: [What happens]
+
+**Validation Tool/Command:**
+```bash
+[Command to validate a plugin]
+```
+6.2 Runtime Safety Mechanisms
+markdown**Error Isolation:**
+- [How plugin failures are contained]
+- [System recovery strategy]
+- [Error reporting to core]
+
+**Resource Limits:**
+- Memory: [Limits and enforcement]
+- CPU: [Limits and enforcement]
+- Time: [Execution timeouts]
+- I/O: [Rate limits or restrictions]
+
+**Circuit Breakers:**
+- [When plugins are auto-disabled]
+- [Failure thresholds]
+- [Recovery procedures]
+
+Section 7: PLUGIN CONFIGURATION & CUSTOMIZATION
+7.1 Configuration System
+markdown**Configuration Sources:**
+- [Where plugins read config: files / env vars / database / API]
+- [Config precedence order]
+- [Hot-reload support: Yes/No/Partial]
+
+**Configuration Schema:**
+```[format]
+{
+  "plugin_config": {
+    "[field]": "[type and default]",
+    "[field]": "[type and default]"
+  }
+}
+```
+
+**Example Plugin Config:**
+```[format]
+[Paste real example]
+```
+7.2 Plugin-Specific Customization
+markdown**Customization Points:**
+- [How users customize plugin behavior]
+- [Override mechanisms]
+- [Extension of extensions (meta-plugins)]
+
+**Templates/Scaffolding:**
+```bash
+[Command to generate new plugin from template]
+```
+
+Section 8: PLUGIN EXAMPLES & PATTERNS
+8.1 Real Plugin Examples
+For 3-5 real plugins from the system:
+markdown#### Plugin Example: **[Plugin Name]**
+
+**Purpose:** [What this plugin does]
+
+**Hooks Used:**
+- `[hook1]` - [What it does with this hook]
+- `[hook2]` - [What it does with this hook]
+
+**Key Features:**
+- [Feature 1]
+- [Feature 2]
+
+**Code Snippet:**
+```[language]
+[Show most interesting part of implementation]
+```
+
+**Manifest:**
+```[format]
+[Show plugin's manifest]
+```
+8.2 Common Plugin Patterns
+markdown**Pattern 1: [Pattern Name]**
+- **Use Case:** [When to use this pattern]
+- **Implementation:** [How it works]
+- **Example:** [Brief code snippet]
+
+**Pattern 2: [Pattern Name]**
+- **Use Case:** [When to use this pattern]
+- **Implementation:** [How it works]
+- **Example:** [Brief code snippet]
+
+**Pattern 3: [Pattern Name]**
+- **Use Case:** [When to use this pattern]
+- **Implementation:** [How it works]
+- **Example:** [Brief code snippet]
+
+Section 9: PLUGIN DEVELOPMENT WORKFLOW
+9.1 Developer Experience
+markdown**Steps to Create a Plugin:**
+
+1. **[Step]** - [Action and tools]
+```bash
+   [Command]
+```
+
+2. **[Step]** - [Action and tools]
+```bash
+   [Command]
+```
+
+3. **[Step]** - [Action and tools]
+```bash
+   [Command]
+```
+
+**Development Tools:**
+- [Tool/SDK name] - [Purpose]
+- [Tool/SDK name] - [Purpose]
+- [Tool/SDK name] - [Purpose]
+
+**Testing Approach:**
+- [How to test plugins in isolation]
+- [Integration testing strategy]
+- [Mock/stub availability]
+9.2 Debugging & Troubleshooting
+markdown**Debug Capabilities:**
+- [Logging framework]
+- [Debug mode activation]
+- [Inspection tools]
+- [Error diagnostics]
+
+**Common Issues & Solutions:**
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| [Problem] | [Why it happens] | [How to fix] |
+| [Problem] | [Why it happens] | [How to fix] |
+
+Section 10: PLUGIN ECOSYSTEM & DISTRIBUTION
+10.1 Plugin Discovery & Installation
+markdown**Official Plugin Registry:**
+- Location: [URL or registry name]
+- Browse command: `[command]`
+- Install command: `[command]`
+
+**Third-Party Plugins:**
+- [How to find them]
+- [Security considerations]
+- [Vetting process]
+
+**Installation Methods:**
+- [Method 1: package manager]
+- [Method 2: manual]
+- [Method 3: git clone]
+10.2 Plugin Versioning & Dependencies
+markdown**Versioning Scheme:** [SemVer / CalVer / Custom]
+
+**Dependency Declaration:**
+```[format]
+[How plugins specify dependencies on core version or other plugins]
+```
+
+**Compatibility Matrix:**
+| Plugin Version | Core Version | Breaking Changes |
+|----------------|--------------|------------------|
+| [version] | [version] | [What changed] |
+
+Section 11: PLUGIN ARCHITECTURE STRENGTHS & WEAKNESSES
+11.1 Architectural Strengths
+markdown✅ **[Strength 1]**
+   - Why it's good: [Explanation]
+   - Example: [How it manifests]
+
+✅ **[Strength 2]**
+   - Why it's good: [Explanation]
+   - Example: [How it manifests]
+
+✅ **[Strength 3]**
+   - Why it's good: [Explanation]
+   - Example: [How it manifests]
+11.2 Architectural Limitations
+markdown⚠️ **[Limitation 1]**
+   - Why it's limiting: [Explanation]
+   - Workaround: [If any]
+
+⚠️ **[Limitation 2]**
+   - Why it's limiting: [Explanation]
+   - Workaround: [If any]
+
+⚠️ **[Limitation 3]**
+   - Why it's limiting: [Explanation]
+   - Workaround: [If any]
+11.3 Design Tradeoffs
+markdown**Flexibility vs. Performance:**
+- [How this system balances]
+
+**Safety vs. Capability:**
+- [Restrictions and rationale]
+
+**Simplicity vs. Power:**
+- [Learning curve vs features]
+
+Section 12: COMPARATIVE METRICS
+12.1 Plugin System Characteristics
+markdown| Characteristic | Rating (1-5) | Notes |
+|----------------|--------------|-------|
+| **Ease of Plugin Creation** | ⭐⭐⭐⭐⭐ | [Brief explanation] |
+| **Extensibility Breadth** | ⭐⭐⭐⭐⭐ | [How many extension points] |
+| **Safety/Isolation** | ⭐⭐⭐⭐⭐ | [How well plugins are sandboxed] |
+| **Performance Overhead** | ⭐⭐⭐⭐⭐ | [Impact on system performance] |
+| **Documentation Quality** | ⭐⭐⭐⭐⭐ | [Plugin dev docs completeness] |
+| **Developer Experience** | ⭐⭐⭐⭐⭐ | [Tools, debugging, testing] |
+| **Plugin Ecosystem Size** | ⭐⭐⭐⭐⭐ | [Number of available plugins] |
+12.2 Complexity Analysis
+markdown**Lines of Code for "Hello World" Plugin:** [Number]
+
+**Number of Required Artifacts:** [Number]
+
+**Number of Extension Points:** [Number]
+
+**Learning Curve:** [Beginner / Intermediate / Advanced]
+
+**Time to First Plugin:** [Estimate in hours/days]
+
+Section 13: KEY TAKEAWAYS & PATTERNS
+13.1 Core Architectural Patterns
+markdown1. **[Pattern Name]**
+   - Description: [How it works]
+   - Benefits: [Why it's used]
+   - Trade-offs: [Costs]
+
+2. **[Pattern Name]**
+   - Description: [How it works]
+   - Benefits: [Why it's used]
+   - Trade-offs: [Costs]
+
+3. **[Pattern Name]**
+   - Description: [How it works]
+   - Benefits: [Why it's used]
+   - Trade-offs: [Costs]
+13.2 Reusable Design Decisions
+markdown**Decisions Worth Borrowing:**
+- ✅ [Decision] - [Why it's good, how to apply elsewhere]
+- ✅ [Decision] - [Why it's good, how to apply elsewhere]
+- ✅ [Decision] - [Why it's good, how to apply elsewhere]
+
+**Decisions to Avoid:**
+- ❌ [Decision] - [Why it's problematic, better alternatives]
+- ❌ [Decision] - [Why it's problematic, better alternatives]
+
+Section 14: CROSS-SYSTEM COMPARISON MATRIX
+(Use this when analyzing multiple systems)
+markdown| Aspect | [System A] | [System B] | [System C] |
+|--------|-----------|-----------|-----------|
+| **Discovery Method** | [Method] | [Method] | [Method] |
+| **Loading Strategy** | [Strategy] | [Strategy] | [Strategy] |
+| **Isolation Level** | [Level] | [Level] | [Level] |
+| **Extension Points** | [Count] | [Count] | [Count] |
+| **Permission Model** | [Type] | [Type] | [Type] |
+| **Plugin Language** | [Lang] | [Lang] | [Lang] |
+| **Validation Approach** | [Approach] | [Approach] | [Approach] |
+| **Configuration System** | [Type] | [Type] | [Type] |
+| **Developer Tools** | [Tools] | [Tools] | [Tools] |
+| **Ecosystem Size** | [Size] | [Size] | [Size] |
+
+ANALYSIS GUIDELINES:
+1. Focus Areas
+Primary Focus:
+
+How plugins are discovered, loaded, and managed
+What extension points exist and their contracts
+How plugins interact with core and each other
+Safety and isolation mechanisms
+Developer experience and tooling
+
+Secondary Focus:
+
+Specific use cases and real plugins
+Ecosystem maturity
+Documentation quality
+Performance characteristics
+
+2. Evidence Requirements
+For each claim, provide:
+
+Code examples from actual plugins or documentation
+Command examples showing real usage
+Schema/contract examples with actual formats
+Links to official documentation (if available)
+
+3. Depth Guidelines
+
+Mandatory depth: Sections 1-7 (Overview through Configuration)
+Important depth: Sections 8-10 (Examples through Ecosystem)
+Analysis depth: Sections 11-14 (Strengths through Comparison)
+
+4. When Information is Missing
+If you cannot find specific information:
+markdown**[Section Name]:** ⚠️ Not documented / Not found in provided materials
+
+*Inference based on related patterns:* [Your educated guess]
+*Recommendation:* [What to look for to complete this section]
+5. Language & Format Consistency
+
+Use the actual language of the system for code examples
+Keep table structures consistent
+Use ✅/❌/⚠️/⭐ symbols consistently
+Number sections sequentially
+Apply syntax highlighting to all code blocks
+
+
+EXAMPLE SNIPPET (for reference):
+markdown## Section 2: PLUGIN EXTENSION POINTS
+
+### 2.1 Available Hooks/Events
+
+| Hook/Event Name | Trigger Condition | Plugin Receives | Plugin Returns | Can Block? | Examples |
+|-----------------|-------------------|-----------------|----------------|------------|----------|
+| **FileDetected** | New/modified file appears | File metadata (path, hash, size, mime) | List of proposals (move/quarantine/dedupe) | No | File classifier, auto-organizer |
+| **PreMerge** | Before git merge attempt | Branch info, changed files | Validation results, gate pass/fail | Yes | Linter, test runner, security scanner |
+| **MergeConflict** | Git conflict detected | Conflict details, content from both sides | Resolution strategy, confidence score | No | Conflict resolver, smart merge |
+
+### 2.2 Hook Priority & Ordering
+
+**Execution Order Control:**
+- Plugins specify priority via manifest field: `"priority": 1-100` (lower = earlier)
+- Default ordering: registration order
+- Conflict resolution: Highest priority wins; ties use registration order
+
+**Examples:**
+```json
+{
+  "name": "critical-validator",
+  "hooks": ["PreMerge"],
+  "priority": 10  // Runs early
+}
+```
+
+OUTPUT CHECKLIST:
+Before submitting your analysis, verify:
+
+ All 14 sections completed (or marked as unavailable)
+ At least 3 real code examples included
+ Extension points fully documented with I/O contracts
+ Plugin lifecycle clearly explained
+ Permission model documented
+ Validation/safety mechanisms described
+ At least 2 complete plugin examples provided
+ Strengths and weaknesses honestly assessed
+ Comparative metrics table filled
+ Key patterns identified
+ Consistent formatting throughout
+ All code blocks have syntax highlighting
+
+
+NOW ANALYZE THIS PLUGIN SYSTEM:
+[PASTE PLUGIN DOCUMENTATION, EXTENSION GUIDES, ARCHITECTURE DOCS, OR PROJECT DESCRIPTION HERE]
+System Name: [Name of system you're analyzing]
+Version/Date: [If relevant]
+Documentation Links: [If you have specific URLs to reference]
+
+END OF TEMPLATE
+
+Multi-System Comparison Workflow:
+To compare multiple plugin architectures:
+
+Run this analysis on System A → Save as system_a_plugins.md
+Run this analysis on System B → Save as system_b_plugins.md
+Run this analysis on System C → Save as system_c_plugins.md
+Generate comparison report:
+
+markdown# Plugin Architecture Comparison: [System A] vs [System B] vs [System C]
+
+Use Section 14 tables from each analysis to create unified comparison.
+
+## Key Differentiators
+
+**System A excels at:**
+- [Specific strength]
+- [Pattern worth adopting]
+
+**System B excels at:**
+- [Specific strength]
+- [Pattern worth adopting]
+
+**System C excels at:**
+- [Specific strength]
+- [Pattern worth adopting]
+
+## Recommended Patterns for R_PIPELINE
+
+Based on comparative analysis:
+1. **[Pattern from System X]** - [Why it fits R_PIPELINE needs]
+2. **[Pattern from System Y]** - [How to adapt for deterministic ops]
+3. **[Pattern from System Z]** - [Integration with ledger/rollback]
+
+Suggested Systems to Analyze:
+For Plugin Architecture Inspiration:
+
+VS Code Extension System
+WordPress Plugins
+Webpack Loaders/Plugins
+Babel Plugins
+ESLint Rules/Plugins
+Jenkins Plugins
+Gradle/Maven Plugins
+Vim/Neovim Plugins
+Chrome Extensions
+Pytest Plugins
+
+This template will produce consistent, comparable plugin architecture reports for cross-system analysis.

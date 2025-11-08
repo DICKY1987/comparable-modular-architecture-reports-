@@ -1,0 +1,128 @@
+Here you go — 1-line descriptions, grouped by type.
+
+# Coding assistants & code-automation (CLI-first)
+
+* Aider — terminal-first coding agent that edits your repo from the shell.
+* Continue — open-source coding assistant with a CLI for headless tasks.
+* SWE-agent — research-grade CLI agent for software-engineering tasks.
+* AutoCodeRover — code-change agent with command-line modes for evals/experiments.
+* GPT-Engineer — generates or improves whole codebases from the CLI.
+* MetaGPT — multi-agent codegen that turns specs into repos with a single command.
+* Claude Code — Anthropic’s coding assistant for refactors, tests, and fixes across projects.
+* GitHub Copilot — AI pair programmer for IDE/terminal workflows, including a Copilot CLI.
+* Open Interpreter — run code and local tools safely from a natural-language CLI.
+* OpenHands — dev agent (formerly OpenDevin) with a full CLI and headless runs. ([GitHub][1])
+* Jules Tools — command-line companion for Google’s Jules coding agent (start/track tasks from terminal).
+
+
+
+Here’s a compact “tool → task” matrix like your example.
+Legend: ✓ = strong fit · ○ = indirect/limited (e.g., via plugin or local model) · — = not a focus / N/A.
+
+# Table A
+
+| Task \ Tool                          | Claude Code | Aider | Continue | OpenHands | Open Interpreter | GitHub Copilot |
+| ------------------------------------ | ----------: | ----: | -------: | --------: | ---------------: | -------------: |
+| High-level planning                  |           ✓ |     ○ |        ○ |         ✓ |                ○ |              ○ |
+| Code generation (new files/features) |           ✓ |     ✓ |        ✓ |         ✓ |                ✓ |              ✓ |
+| Code editing (Python/any)            |           ✓ |     ✓ |        ✓ |         ✓ |                ✓ |              ✓ |
+| Code editing (PowerShell/shell)      |           ✓ |     ✓ |        ○ |         ✓ |                ✓ |              ○ |
+| File operations (read/write local)   |           ○ |     ✓ |        ✓ |         ✓ |                ✓ |              — |
+| Task orchestration (multi-step runs) |           ○ |     ○ |        ○ |         ✓ |                ○ |              — |
+| Git operations (commit/PR workflow)  |           ○ |     ✓ |        ○ |         ✓ |                ○ |              ○ |
+| Offline-capable                      |          ○* |    ✓* |       ✓* |        ○* |               ✓* |              — |
+
+# Table B
+
+| Task \ Tool                          | GPT-Engineer | MetaGPT | SWE-agent | AutoCodeRover | Jules Tools |                GitHub |
+| ------------------------------------ | -----------: | ------: | --------: | ------------: | ----------: | --------------------: |
+| High-level planning                  |            ○ |       ✓ |         ○ |             ○ |           ○ |                     ✓ |
+| Code generation (new files/features) |            ✓ |       ✓ |         ✓ |             ✓ |           ○ |                     — |
+| Code editing (Python/any)            |            ○ |       ✓ |         ✓ |             ✓ |           ○ |                     — |
+| Code editing (PowerShell/shell)      |            ○ |       ○ |         ✓ |             ✓ |           ○ |                     — |
+| File operations (read/write local)   |            ✓ |       ✓ |         ✓ |             ✓ |           ○ |                     ✓ |
+| Task orchestration (multi-step runs) |            — |       ✓ |         ○ |             ○ |           ○ | ✓ (Actions/Workflows) |
+| Git operations (commit/PR workflow)  |            — |       ○ |         ✓ |             ✓ |           — |                     ✓ |
+| Offline-capable                      |           ✓* |      ○* |        ○* |            ○* |           — |                   N/A |
+
+*Offline-capable via a **local model/runtime** (e.g., Ollama/LM Studio or system Python) and proper configuration.
+
+
+
+# Multi-agent frameworks & runtimes
+
+* AutoGen — Microsoft’s multi-agent orchestration framework for headless Python workflows.
+* CrewAI — Python framework to build and run cooperating agent “crews” via CLI.
+* LangGraph — LangChain’s graph-based runtime with a CLI for local servers & runs.
+* SuperAGI — OSS agent framework runnable via Python or Docker for headless automation.
+* Dify — OSS agent platform with workflows, webhooks, schedulers, and a plugin-dev CLI.
+* CAMEL — research framework for role-playing/multi-agent simulations in Python.
+* ChatDev — multi-agent “software company” simulator driven from the CLI.
+* BabyAGI — classic headless experimental autonomous agent (script/CLI).
+* GPTScript — write agentic workflows as scripts with a first-class CLI runner.
+* AgentScope — multi-agent framework/runtime with Docker/K8s deploys for headless ops.
+* Lagent — lightweight Apache-2.0 agent framework (library/headless).
+* OpenAI Swarm — minimal MIT-licensed multi-agent orchestration library.
+* Langroid — research-backed multi-agent Python framework for tool-use and dialogue.
+
+# Memory/stateful agent frameworks
+
+* MemGPT / Letta — stateful agents with long-term memory; includes a `memgpt` CLI (Letta succeeds MemGPT).
+
+# RAG / data & knowledge tools
+
+* LlamaIndex — framework (plus CLI) to build RAG pipelines over local or remote data.
+* Ragna — open-source RAG orchestration with a `ragna` CLI and TOML configs. ([Ragna][3])
+* Cognee — “AI memory” layer with a CLI for ingest/query in headless pipelines.
+
+# Spec, governance & design-token tooling
+
+* OpenSpec — spec-driven dev toolkit with an `openspec` CLI for init/list/validate/archive. ([GitHub][4])
+* Specify — design-token engine with a CLI to sync tokens from design tools into code. ([Specify][5])
+* Git — distributed version control for deterministic, auditable software delivery.
+
+# Model CLIs & local runners
+
+* LLM (Simon Willison) — general-purpose CLI for running prompts across many models (APIs & local). ([GitHub][6])
+* Ollama — local model runner/registry to pull and run LLMs on your machine.
+
+# Foundation models & SDKs
+
+* Gemini — Google’s foundation-model family for code, chat, and multi-modal tasks.
+* DeepSeek — open/efficient model family (e.g., DeepSeek-Coder) for coding and reasoning.
+* Codex — legacy OpenAI code model that powered early code assistants and APIs.
+
+# System/desktop agents
+
+* Bytebot — self-hosted AI desktop agent that operates a full Linux desktop in a container (Apache-2.0). ([GitHub][7])
+
+# Other / early platforms
+
+* Lemon AI — Docker-based OSS agent platform that’s headless-capable but still early.
+
+
+# MCP Servers 
+
+### Python — code quality & tests
+
+* **Ruff MCP (lint/format/fix)** — fast linting/formatting; great as a default. ([LobeHub][1])
+* **Analyzer (Ruff + Vulture)** — wraps Ruff (style/errors) and Vulture (dead code) in one server. ([GitHub][2])
+* **Python LFT (Lint/Format/Test)** — one server that runs lint, format, and tests; convenient for greenfield repos. ([LobeHub][3])
+* **Pylint MCP** — Pylint via MCP; good for rule-by-rule guidance. ([Medium][4])
+* **Pytest runners** — run tests from the AI with structured results (useful for TDD loops). ([GitHub][5])
+* **PyPI package intel** — query versions/deps/metadata to guide import choices. ([GitHub][6])
+
+### Cross-language — code context & repo ops
+
+* **GitMCP** — turns any GitHub repo into an MCP knowledge hub (kills “hallucinating unknown APIs”). ([GitHub][7])
+* **Sourcegraph codesearch MCP** — precise multi-repo code search/snippets for examples and references. ([GitHub][8])
+* **Git operations MCP** — read/search/manipulate repos (commits, branches, grep). ([PyPI][9])
+
+### PowerShell — execution & analysis
+
+* **PowerShell Exec MCP** — execute scripts/commands from the AI with controlled outputs (great for quick protos). ([GitHub][10])
+* **PowerShell MCP (general)** — fuller cmdlet discovery, run scripts, list modules. ([GitHub][11])
+* **PSScriptAnalyzer (linter)** — not an MCP server itself, but the standard PS linter; wire it into a PS MCP server tool for style/bug checks. ([Microsoft Learn][12])
+* **Microsoft AI Shell & PowerShell Universal** — host/plug MCP in PS environments (handy if you’re PS-first). ([Microsoft Learn][13])
+
+

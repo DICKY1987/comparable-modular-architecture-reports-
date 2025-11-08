@@ -1,0 +1,1746 @@
+
+
+
+NW Plugin Analysis by Module
+
+
+🎯 CORE MODULE PLUGIN REQUIREMENTS
+Module 1: Pipeline Orchestrator
+Plugins Required: NONE (Core functionality only)
+Why: The orchestrator IS the plugin dispatcher. It doesn't need plugins—it calls them.
+Internal Components:
+
+Event loop
+Plugin discovery
+Dispatch router
+Failure isolation
+
+
+Module 2: Ledger Manager
+Plugins Required: NONE (Core functionality only)
+Why: Append-only ledger must be tamper-proof. Only core can write.
+Internal Components:
+
+JSONL writer
+ULID generator
+Query interface
+Rollback reference index
+
+
+Module 3: Git Operations Manager
+Plugins Required: NONE (Core functionality only)
+Why: Git commands are privileged operations. Core executes; plugins propose.
+Internal Components:
+
+Branch creation
+Merge execution
+Snapshot tagging
+Worktree management
+
+
+Module 4: Sync Guardian
+Required Plugins: 3 plugins
+Plugin 4.1: sync-local-analyzer
+
+Lifecycle Event: SyncTriggered (custom event)
+Purpose: Analyzes local repository state
+Deliverables:
+
+plugins/sync-local-analyzer/handler.py
+Detects uncommitted files
+Identifies untracked files
+Lists unpushed commits
+Generates local state snapshot
+
+
+
+Output:
+json{
+  "action": "report_local_state",
+  "payload": {
+    "uncommitted_files": ["src/foo.py"],
+    "untracked_files": ["temp.log"],
+    "unpushed_commits": 3,
+    "branch": "main"
+  }
+}
+Plugin 4.2: sync-remote-analyzer
+
+Lifecycle Event: SyncTriggered
+Purpose: Fetches and analyzes remote state
+Deliverables:
+
+plugins/sync-remote-analyzer/handler.py
+Fetches remote refs
+Identifies remote-only commits
+Detects diverged branches
+Generates remote state snapshot
+
+
+
+Output:
+json{
+  "action": "report_remote_state",
+  "payload": {
+    "remote_commits_ahead": 5,
+    "remote_branches_new": ["feature/x"],
+    "fetch_timestamp": "2025-10-27T12:00:00Z"
+  }
+}
+Plugin 4.3: sync-conflict-detector
+
+Lifecycle Event: SyncTriggered
+Purpose: Identifies sync conflicts before merge attempt
+Deliverables:
+
+plugins/sync-conflict-detector/handler.py
+Compares local vs remote changes
+Identifies same-file modifications
+Classifies conflict risk (low/medium/high)
+Recommends sync strategy
+
+
+
+Output:
+json{
+  "action": "report_conflicts",
+  "payload": {
+    "conflicts": [
+      {
+        "file": "src/config.py",
+        "risk": "high",
+        "reason": "both_modified_different_lines"
+      }
+    ],
+    "recommended_strategy": "create_sync_branch"
+  }
+}
+
+Module 5: Plugin Registry & Loader
+Plugins Required: NONE (Core functionality only)
+Why: Registry must validate and load plugins—can't be a plugin itself.
+
+Module 6: Validator Engine
+Required Plugins: 5 plugins
+Plugin 6.1: validator-structure
+
+Lifecycle Event: PluginValidationRequested (custom)
+Purpose: Checks required file presence
+Deliverables:
+
+plugins/validator-structure/handler.py
+Verifies all 8 required artifacts exist
+Checks directory structure
+Validates file naming conventions
+
+
+
+Output:
+json{
+  "action": "validation_result",
+  "payload": {
+    "check": "structure",
+    "status": "fail",
+    "missing_files": ["healthcheck.md"],
+    "blocking": true
+  }
+}
+Plugin 6.2: validator-contract
+
+Lifecycle Event: PluginValidationRequested
+Purpose: Validates against Operating Contract
+Deliverables:
+
+plugins/validator-contract/handler.py
+Checks lifecycle event is allowed
+Validates input/output schemas match contract
+Verifies required ledger fields present
+
+
+
+Plugin 6.3: validator-safepatch
+
+Lifecycle Event: PluginValidationRequested
+Purpose: Checks SafePatch boundaries are preserved
+Deliverables:
+
+plugins/validator-safepatch/handler.py
+Detects BEGIN/END AUTO SECTION markers
+Ensures no edits outside fences
+Validates fence integrity
+
+
+
+Plugin 6.4: validator-security
+
+Lifecycle Event: PluginValidationRequested
+Purpose: Static security analysis
+Deliverables:
+
+plugins/validator-security/handler.py
+Scans for dangerous imports (subprocess, os.system)
+Detects network calls (requests, urllib)
+Identifies file system mutations
+Uses Semgrep/Gitleaks integration
+
+
+
+Pattern Detection:
+pythonDANGEROUS_PATTERNS = [
+    r"^\s*import\s+subprocess",
+    r"os\.system\(",
+    r"eval\(",
+    r"exec\(",
+    r"__import__",
+]
+Plugin 6.5: validator-smoke-test
+
+Lifecycle Event: PluginValidationRequested
+Purpose: Dry-run execution test
+Deliverables:
+
+plugins/validator-smoke-test/handler.py
+Imports plugin handler
+Calls with mock event
+Verifies return structure
+Checks for unhandled exceptions
+
+
+
+
+Module 7: Generator/Scaffold Engine
+Plugins Required: NONE (Core functionality only)
+Why: Generator creates plugin skeletons. Can't be a plugin itself (chicken-egg).
+
+Module 8: Policy Enforcement Engine
+Required Plugins: 2 plugins
+Plugin 8.1: policy-action-checker
+
+Lifecycle Event: PolicyCheckRequested (custom)
+Purpose: Validates proposed actions against policy
+Deliverables:
+
+plugins/policy-action-checker/handler.py
+Reads policy_pack.json
+Checks action is in allowlist for event
+Verifies not in denylist
+Returns pass/fail
+
+
+
+Output:
+json{
+  "action": "policy_check_result",
+  "payload": {
+    "proposed_action": "propose_move",
+    "event": "FileDetected",
+    "allowed": true,
+    "policy_version": "2025-10-27.v1"
+  }
+}
+Plugin 8.2: policy-resource-limiter
+
+Lifecycle Event: PolicyCheckRequested
+Purpose: Enforces resource constraints
+Deliverables:
+
+plugins/policy-resource-limiter/handler.py
+Checks execution timeout limits
+Monitors memory usage constraints
+Enforces max file size limits
+Validates operation scope
+
+
+
+
+🔌 FILE OPERATIONS MODULE PLUGINS
+Module 9: File Classifier/Organizer
+Required Plugins: 6 plugins
+Plugin 9.1: classifier-keyword-matcher
+
+Lifecycle Event: FileDetected
+Purpose: Matches file content to module keywords
+Deliverables:
+
+plugins/classifier-keyword-matcher/handler.py
+Reads file content
+Reads module_registry.json
+Scores filename keywords
+Scores content keywords
+Returns top 3 matches with confidence
+
+
+
+Module Registry Example:
+json{
+  "Goal_Normalizer_MOD": {
+    "keywords": ["normalize", "goal", "capability", "constraint"],
+    "filename_patterns": ["*goal*", "*norm*"],
+    "content_patterns": ["def normalize", "class Goal"]
+  }
+}
+Output:
+json{
+  "action": "propose_classification",
+  "payload": {
+    "file": "normalize_goals.py",
+    "matches": [
+      {"module": "Goal_Normalizer_MOD", "confidence": 0.92, "reasons": ["filename_match", "content_keywords"]},
+      {"module": "Synthesizer_MOD", "confidence": 0.45, "reasons": ["weak_content_match"]}
+    ]
+  }
+}
+Plugin 9.2: classifier-extension-router
+
+Lifecycle Event: FileDetected
+Purpose: Routes by file extension
+Deliverables:
+
+plugins/classifier-extension-router/handler.py
+Maps extensions to module types
+Routes .py to Python modules
+Routes .ps1 to PowerShell modules
+Routes .md to documentation
+
+
+
+Plugin 9.3: classifier-shebang-analyzer
+
+Lifecycle Event: FileDetected
+Purpose: Analyzes script shebangs for classification hints
+Deliverables:
+
+plugins/classifier-shebang-analyzer/handler.py
+Reads first line of file
+Identifies #!/usr/bin/env python3
+Identifies #!/usr/bin/env pwsh
+Returns script type
+
+
+
+Plugin 9.4: deduplicator-hash-based
+
+Lifecycle Event: FileDetected
+Purpose: Detects exact duplicates via content hash
+Deliverables:
+
+plugins/deduplicator-hash-based/handler.py
+Calculates SHA-256 of file
+Searches existing files for same hash
+Proposes keep-newest or keep-largest strategy
+
+
+
+Output:
+json{
+  "action": "propose_dedupe",
+  "payload": {
+    "new_file": "foo_copy.py",
+    "duplicate_of": "foo.py",
+    "hash": "sha256:abc123...",
+    "recommendation": "keep_newest",
+    "reason": "new_file mtime newer by 3 days"
+  }
+}
+Plugin 9.5: deduplicator-similarity-based
+
+Lifecycle Event: FileDetected
+Purpose: Detects near-duplicates via similarity analysis
+Deliverables:
+
+plugins/deduplicator-similarity-based/handler.py
+Compares file names (Levenshtein distance)
+Compares file sizes
+Compares first 100 lines
+Identifies >90% similar files
+
+
+
+Plugin 9.6: quarantine-router
+
+Lifecycle Event: FileDetected
+Purpose: Sends unclassifiable files to quarantine
+Deliverables:
+
+plugins/quarantine-router/handler.py
+Triggered when no classifier has confidence >0.5
+Creates quarantine category (UNCLASSIFIED, AMBIGUOUS, etc.)
+Generates review instructions
+
+
+
+Output:
+json{
+  "action": "propose_quarantine",
+  "payload": {
+    "file": "mystery.xyz",
+    "reason_code": "unknown_type",
+    "category": "QUARANTINE_UNCLASSIFIED",
+    "review_notes": "No module matched. Extension .xyz not recognized. Manual review required."
+  }
+}
+
+⚔️ MERGE & CONFLICT MODULE PLUGINS
+Module 10: Conflict Resolver Suite
+Required Plugins: 8 plugins
+Plugin 10.1: conflict-resolver-take-ours
+
+Lifecycle Event: MergeConflict
+Purpose: Strategy: always prefer local version
+Deliverables:
+
+plugins/conflict-resolver-take-ours/handler.py
+Analyzes conflict markers
+Returns local version
+Confidence based on file type
+
+
+
+When to use: Config files, local settings, user preferences
+Plugin 10.2: conflict-resolver-take-theirs
+
+Lifecycle Event: MergeConflict
+Purpose: Strategy: always prefer remote version
+Deliverables:
+
+plugins/conflict-resolver-take-theirs/handler.py
+Returns remote version
+Confidence based on file age
+
+
+
+When to use: Lockfiles, generated code, upstream dependencies
+Plugin 10.3: conflict-resolver-smart-merge-json
+
+Lifecycle Event: MergeConflict
+Purpose: Structure-aware JSON merging
+Deliverables:
+
+plugins/conflict-resolver-smart-merge-json/handler.py
+Parses both versions as JSON
+Merges non-conflicting keys
+Flags truly conflicting keys for quarantine
+
+
+
+Logic:
+pythondef merge_json(ours, theirs):
+    merged = {}
+    all_keys = set(ours.keys()) | set(theirs.keys())
+    for key in all_keys:
+        if key in ours and key not in theirs:
+            merged[key] = ours[key]
+        elif key in theirs and key not in ours:
+            merged[key] = theirs[key]
+        elif ours[key] == theirs[key]:
+            merged[key] = ours[key]
+        else:
+            # True conflict - needs quarantine
+            return None, f"Conflict on key: {key}"
+    return merged, None
+Plugin 10.4: conflict-resolver-smart-merge-yaml
+
+Lifecycle Event: MergeConflict
+Purpose: Structure-aware YAML merging
+Deliverables:
+
+Similar to JSON merger
+Handles YAML-specific syntax
+Preserves comments where possible
+
+
+
+Plugin 10.5: conflict-resolver-three-way
+
+Lifecycle Event: MergeConflict
+Purpose: Uses common base for intelligent merge
+Deliverables:
+
+plugins/conflict-resolver-three-way/handler.py
+Compares ours vs base
+Compares theirs vs base
+If changes don't overlap, merges both
+If overlap detected, quarantine
+
+
+
+Plugin 10.6: conflict-resolver-line-based
+
+Lifecycle Event: MergeConflict
+Purpose: Per-line conflict analysis
+Deliverables:
+
+plugins/conflict-resolver-line-based/handler.py
+Analyzes conflicts by line number
+Detects whitespace-only conflicts
+Detects import order conflicts
+Auto-resolves trivial conflicts
+
+
+
+Plugin 10.7: conflict-analyzer-risk-scorer
+
+Lifecycle Event: MergeConflict
+Purpose: Assigns risk scores to conflicts
+Deliverables:
+
+plugins/conflict-analyzer-risk-scorer/handler.py
+Scores based on file type (core vs plugin)
+Scores based on change size
+Scores based on conflict type
+Returns confidence for auto-resolution
+
+
+
+Risk Scoring:
+pythondef calculate_risk(conflict):
+    risk = 0
+    if conflict.file.startswith("core/"):
+        risk += 50  # High risk for core files
+    if conflict.line_count > 50:
+        risk += 30  # Large conflicts are risky
+    if conflict.type == "delete":
+        risk += 20  # Deletions are risky
+    return min(100, risk)  # 0-100 scale
+Plugin 10.8: conflict-quarantine-router
+
+Lifecycle Event: MergeConflict
+Purpose: Routes unsolvable conflicts to quarantine
+Deliverables:
+
+plugins/conflict-quarantine-router/handler.py
+Triggered when all resolvers return low confidence
+Creates conflict quarantine branch
+Generates detailed conflict report
+Provides manual resolution instructions
+
+
+
+
+✅ QUALITY & VALIDATION MODULE PLUGINS
+Module 11: Pre-Merge Quality Gates
+Required Plugins: 10 plugins
+Plugin 11.1: gate-python-lint-ruff
+
+Lifecycle Event: PreMerge
+Purpose: Fast Python linting via Ruff
+Deliverables:
+
+plugins/gate-python-lint-ruff/handler.py
+Runs ruff check on changed files
+Returns violation count
+Suggests fixes
+Blocks if critical violations found
+
+
+
+Output:
+json{
+  "action": "gate_result",
+  "payload": {
+    "gate_name": "ruff_lint",
+    "status": "warn",
+    "violations": 3,
+    "critical": 0,
+    "fixable": 2,
+    "blocking": false,
+    "details": ["E501: line too long", "F401: unused import"]
+  }
+}
+Plugin 11.2: gate-python-format-black
+
+Lifecycle Event: PreMerge
+Purpose: Python formatting check
+Deliverables:
+
+plugins/gate-python-format-black/handler.py
+Runs black --check
+Returns formatting violations
+Can auto-apply fixes if configured
+
+
+
+Plugin 11.3: gate-python-type-mypy
+
+Lifecycle Event: PreMerge
+Purpose: Python type checking
+Deliverables:
+
+plugins/gate-python-type-mypy/handler.py
+Runs mypy on changed files
+Returns type errors
+Blocking for critical type errors
+
+
+
+Plugin 11.4: gate-powershell-lint-analyzer
+
+Lifecycle Event: PreMerge
+Purpose: PowerShell linting via PSScriptAnalyzer
+Deliverables:
+
+plugins/gate-powershell-lint-analyzer/handler.py
+Runs Invoke-ScriptAnalyzer
+Returns violation count by severity
+Blocks on Error severity
+
+
+
+Plugin 11.5: gate-security-secrets
+
+Lifecycle Event: PreMerge
+Purpose: Secret detection via Gitleaks
+Deliverables:
+
+plugins/gate-security-secrets/handler.py
+Runs gitleaks detect
+Scans for API keys, passwords, tokens
+Always blocking if secrets found
+
+
+
+Plugin 11.6: gate-security-patterns
+
+Lifecycle Event: PreMerge
+Purpose: Security pattern analysis via Semgrep
+Deliverables:
+
+plugins/gate-security-patterns/handler.py
+Runs Semgrep with security rules
+Detects SQL injection, XSS, etc.
+Blocking for high-severity findings
+
+
+
+Plugin 11.7: gate-test-runner-pytest
+
+Lifecycle Event: PreMerge
+Purpose: Python test execution
+Deliverables:
+
+plugins/gate-test-runner-pytest/handler.py
+Runs pytest on relevant tests
+Returns pass/fail counts
+Blocking if tests fail
+
+
+
+Plugin 11.8: gate-test-runner-pester
+
+Lifecycle Event: PreMerge
+Purpose: PowerShell test execution
+Deliverables:
+
+plugins/gate-test-runner-pester/handler.py
+Runs Invoke-Pester
+Returns test results
+Blocking if tests fail
+
+
+
+Plugin 11.9: gate-coverage-checker
+
+Lifecycle Event: PreMerge
+Purpose: Code coverage validation
+Deliverables:
+
+plugins/gate-coverage-checker/handler.py
+Checks coverage percentage
+Compares to threshold (85% per contract)
+Warning if below threshold
+
+
+
+Plugin 11.10: gate-doc-completeness
+
+Lifecycle Event: PreMerge
+Purpose: Validates documentation exists
+Deliverables:
+
+plugins/gate-doc-completeness/handler.py
+Checks for README in changed modules
+Validates docstrings in Python
+Validates comment-based help in PowerShell
+
+
+
+
+🔧 AUTO-FIX MODULE PLUGINS
+Module 14: Auto-Fix/Format Suite
+Required Plugins: 8 plugins
+Plugin 14.1: autofix-python-imports-isort
+
+Lifecycle Event: FileDetected or PreMerge
+Purpose: Auto-sorts Python imports
+Deliverables:
+
+plugins/autofix-python-imports-isort/handler.py
+Runs isort on file
+Applies fixes automatically
+Logs changes to ledger
+
+
+
+Output:
+json{
+  "action": "propose_fix",
+  "payload": {
+    "file": "src/foo.py",
+    "fix_type": "import_sort",
+    "before_hash": "abc123",
+    "after_hash": "def456",
+    "description": "Sorted imports according to isort config"
+  }
+}
+Plugin 14.2: autofix-python-format-black
+
+Lifecycle Event: PreMerge
+Purpose: Auto-formats Python code
+Deliverables:
+
+plugins/autofix-python-format-black/handler.py
+Runs black on file
+Applies formatting
+Returns diff
+
+
+
+Plugin 14.3: autofix-python-format-ruff
+
+Lifecycle Event: PreMerge
+Purpose: Ruff auto-fixable violations
+Deliverables:
+
+plugins/autofix-python-format-ruff/handler.py
+Runs ruff check --fix
+Fixes safe violations automatically
+Reports unfixable violations
+
+
+
+Plugin 14.4: autofix-whitespace-trimmer
+
+Lifecycle Event: FileDetected
+Purpose: Removes trailing whitespace
+Deliverables:
+
+plugins/autofix-whitespace-trimmer/handler.py
+Detects trailing whitespace
+Removes it
+Works on all text files
+
+
+
+Plugin 14.5: autofix-line-endings
+
+Lifecycle Event: FileDetected
+Purpose: Normalizes line endings
+Deliverables:
+
+plugins/autofix-line-endings/handler.py
+Detects mixed line endings
+Normalizes to LF or CRLF (configurable)
+Logs change
+
+
+
+Plugin 14.6: autofix-powershell-format
+
+Lifecycle Event: PreMerge
+Purpose: PowerShell formatting
+Deliverables:
+
+plugins/autofix-powershell-format/handler.py
+Uses PSScriptAnalyzer auto-fixes
+Applies safe formatting changes
+
+
+
+Plugin 14.7: autofix-json-formatter
+
+Lifecycle Event: FileDetected
+Purpose: Pretty-prints JSON files
+Deliverables:
+
+plugins/autofix-json-formatter/handler.py
+Parses JSON
+Re-serializes with proper indentation
+Validates syntax
+
+
+
+Plugin 14.8: autofix-yaml-formatter
+
+Lifecycle Event: FileDetected
+Purpose: YAML formatting via yamllint/yq
+Deliverables:
+
+plugins/autofix-yaml-formatter/handler.py
+Runs yamllint --fix if available
+Normalizes indentation
+Preserves comments
+
+
+
+
+📊 POST-MERGE MODULE PLUGINS
+Module 12: Post-Merge Validators
+Required Plugins: 6 plugins
+Plugin 12.1: postmerge-validator-syntax
+
+Lifecycle Event: PostMerge
+Purpose: Validates merged code still parses
+Deliverables:
+
+plugins/postmerge-validator-syntax/handler.py
+Runs python -m py_compile on Python files
+Runs pwsh -NoProfile -Command "Test-Path $file" on PowerShell
+Returns pass/fail
+Triggers rollback if fail
+
+
+
+Plugin 12.2: postmerge-validator-schema
+
+Lifecycle Event: PostMerge
+Purpose: Validates JSON/YAML schema compliance
+Deliverables:
+
+plugins/postmerge-validator-schema/handler.py
+Validates config files against schemas
+Checks for required fields
+Triggers rollback if schema violated
+
+
+
+Plugin 12.3: postmerge-notify-slack
+
+Lifecycle Event: PostMerge
+Purpose: Sends merge notification to Slack
+Deliverables:
+
+plugins/postmerge-notify-slack/handler.py
+Sends webhook with merge summary
+Includes commit hash, files changed, author
+Links to GitHub PR if applicable
+
+
+
+Plugin 12.4: postmerge-notify-discord
+
+Lifecycle Event: PostMerge
+Purpose: Sends merge notification to Discord
+Deliverables:
+
+Similar to Slack plugin
+Uses Discord webhook format
+
+
+
+Plugin 12.5: postmerge-cleanup-branches
+
+Lifecycle Event: PostMerge
+Purpose: Deletes merged feature branches
+Deliverables:
+
+plugins/postmerge-cleanup-branches/handler.py
+Identifies source branch
+Confirms it's merged
+Deletes local and remote branch
+Logs deletion
+
+
+
+Plugin 12.6: postmerge-tag-snapshot
+
+Lifecycle Event: PostMerge
+Purpose: Creates rollback point tag
+Deliverables:
+
+plugins/postmerge-tag-snapshot/handler.py
+Creates Git tag with ULID
+Records commit SHA in ledger
+Enables future rollback to this point
+
+
+
+
+🚨 QUARANTINE MODULE PLUGINS
+Module 13: Quarantine Manager
+Required Plugins: 5 plugins
+Plugin 13.1: quarantine-categorizer
+
+Lifecycle Event: QuarantineCreated
+Purpose: Assigns quarantine category
+Deliverables:
+
+plugins/quarantine-categorizer/handler.py
+Categories: UNCLASSIFIED, AMBIGUOUS, CONFLICT, SECURITY, SYNTAX_ERROR
+Creates appropriate subdirectory
+Generates category-specific instructions
+
+
+
+Plugin 13.2: quarantine-instruction-generator
+
+Lifecycle Event: QuarantineCreated
+Purpose: Creates manual review instructions
+Deliverables:
+
+plugins/quarantine-instruction-generator/handler.py
+Analyzes why item was quarantined
+Generates human-readable steps
+Suggests potential fixes
+
+
+
+Example Output:
+markdown# Quarantine Review: unknown_file.xyz
+
+**Reason:** Unclassified file type
+**Confidence:** All classifiers < 0.5
+**Quarantined At:** 2025-10-27T12:00:00Z
+
+## Manual Steps Required:
+1. Determine if file is necessary
+2. If yes, identify correct module
+3. Add extension `.xyz` to module_registry.json if needed
+4. Move file manually to target module
+5. Delete from quarantine
+
+## Suggested Module (Low Confidence):
+- Goal_Normalizer_MOD (0.35 confidence based on filename)
+Plugin 13.3: quarantine-pattern-extractor
+
+Lifecycle Event: QuarantineCreated
+Purpose: Extracts patterns for future learning
+Deliverables:
+
+plugins/quarantine-pattern-extractor/handler.py
+Identifies common characteristics
+Logs pattern signature
+Enables future classifier improvements
+
+
+
+Pattern Signature:
+json{
+  "extension": ".xyz",
+  "size_range": "1KB-10KB",
+  "common_keywords": ["data", "export"],
+  "frequency": 3
+}
+Plugin 13.4: quarantine-notify-human
+
+Lifecycle Event: QuarantineCreated
+Purpose: Alerts human for review
+Deliverables:
+
+plugins/quarantine-notify-human/handler.py
+Sends email/Slack/Discord notification
+Includes quarantine summary
+Provides direct link to instructions
+
+
+
+Plugin 13.5: quarantine-auto-resolve-timeout
+
+Lifecycle Event: Custom timer (e.g., daily check)
+Purpose: Auto-resolves old quarantine items
+Deliverables:
+
+plugins/quarantine-auto-resolve-timeout/handler.py
+Checks age of quarantined items
+If >30 days, moves to long-term archive
+Notifies before archiving
+
+
+
+
+📈 OBSERVABILITY MODULE PLUGINS
+Module 15: Observability/Metrics
+Required Plugins: 7 plugins
+Plugin 15.1: observability-health-core
+
+Lifecycle Event: Periodic timer (every 5 minutes)
+Purpose: Core system health checks
+Deliverables:
+
+plugins/observability-health-core/handler.py
+Checks ledger file writable
+Checks disk space available
+Checks Git repo accessible
+Returns health status
+
+
+
+Output:
+json{
+  "action": "health_report",
+  "payload": {
+    "status": "healthy",
+    "checks": {
+      "ledger_writable": true,
+      "disk_space_gb": 45.2,
+      "git_accessible": true,
+      "last_successful_run": "2 minutes ago"
+    }
+  }
+}
+```
+
+#### Plugin 15.2: `observability-health-plugins`
+- **Lifecycle Event:** Periodic timer
+- **Purpose:** Plugin health monitoring
+- **Deliverables:**
+  - `plugins/observability-health-plugins/handler.py`
+  - Counts enabled plugins
+  - Tracks plugin failure rates
+  - Identifies stale plugins (not called recently)
+
+#### Plugin 15.3: `observability-metrics-performance`
+- **Lifecycle Event:** `PostMerge` or periodic
+- **Purpose:** Performance metrics collection
+- **Deliverables:**
+  - `plugins/observability-metrics-performance/handler.py`
+  - Tracks execution time per lifecycle event
+  - Records plugin call counts
+  - Measures latency
+
+#### Plugin 15.4: `observability-metrics-git`
+- **Lifecycle Event:** Periodic timer
+- **Purpose:** Git repository metrics
+- **Deliverables:**
+  - `plugins/observability-metrics-git/handler.py`
+  - Counts commits per day
+  - Tracks branch count
+  - Monitors repo size growth
+  - Detects merge conflicts frequency
+
+#### Plugin 15.5: `observability-dashboard-exporter`
+- **Lifecycle Event:** Periodic timer
+- **Purpose:** Exports data for external dashboards
+- **Deliverables:**
+  - `plugins/observability-dashboard-exporter/handler.py`
+  - Exports to JSON for Grafana
+  - Exports to Prometheus format
+  - Creates HTML summary page
+
+#### Plugin 15.6: `observability-alert-threshold`
+- **Lifecycle Event:** Triggered by metrics
+- **Purpose:** Threshold-based alerting
+- **Deliverables:**
+  - `plugins/observability-alert-threshold/handler.py`
+  - Checks disk space < 10GB → alert
+  - Checks plugin failure rate > 10% → alert
+  - Checks no successful run in 1 hour → alert
+
+#### Plugin 15.7: `observability-trend-analyzer`
+- **Lifecycle Event:** Daily
+- **Purpose:** Analyzes trends over time
+- **Deliverables:**
+  - `plugins/observability-trend-analyzer/handler.py`
+  - Detects increasing failure rates
+  - Identifies slowing performance
+  - Predicts disk space exhaustion
+
+---
+
+## 📊 PLUGIN COUNT SUMMARY BY MODULE
+
+| Module | Core Components | Required Plugins | Total Artifacts |
+|--------|----------------|------------------|----------------|
+| Pipeline Orchestrator | 4 | 0 | 4 |
+| Ledger Manager | 4 | 0 | 4 |
+| Git Operations | 4 | 0 | 4 |
+| Sync Guardian | 2 | 3 | 23 (2 + 3×7) |
+| Plugin Registry | 3 | 0 | 3 |
+| Validator Engine | 1 | 5 | 36 (1 + 5×7) |
+| Generator | 2 | 0 | 2 |
+| Policy Enforcer | 2 | 2 | 16 (2 + 2×7) |
+| File Classifier | 0 | 6 | 42 (6×7) |
+| Conflict Resolver | 0 | 8 | 56 (8×7) |
+| Quality Gates | 0 | 10 | 70 (10×7) |
+| Post-Merge | 0 | 6 | 42 (6×7) |
+| Quarantine | 0 | 5 | 35 (5×7) |
+| Auto-Fix | 0 | 8 | 56 (8×7) |
+| Observability | 0 | 7 | 49 (7×7) |
+| **TOTALS** | **22** | **60** | **442** |
+
+*Note: Each plugin generates 7 artifacts (handler + 6 docs)*
+
+---
+
+## 🎯 PLUGIN EXECUTION FLOW EXAMPLE
+
+**Scenario:** New Python file appears in watch directory
+```
+1. FileDetected event fires
+   ↓
+2. Pipeline dispatches to all FileDetected plugins:
+   
+   CLASSIFICATION PHASE:
+   ├→ classifier-keyword-matcher (confidence: 0.82 → Goal_Normalizer_MOD)
+   ├→ classifier-extension-router (confidence: 0.75 → Python modules)
+   ├→ classifier-shebang-analyzer (confidence: 0.60 → Python script)
+   └→ deduplicator-hash-based (no duplicate found)
+   
+   AUTO-FIX PHASE:
+   ├→ autofix-python-imports-isort (sorted imports)
+   ├→ autofix-whitespace-trimmer (removed trailing spaces)
+   └→ autofix-line-endings (normalized to LF)
+   
+3. Core aggregates proposals
+   ↓
+4. Policy Enforcer validates proposals
+   ├→ policy-action-checker (all actions allowed ✓)
+   └→ policy-resource-limiter (within limits ✓)
+   
+5. Core executes approved actions:
+   ├→ Git Operations: Moves file to Goal_Normalizer_MOD/
+   ├→ Git Operations: Applies auto-fixes
+   └→ Ledger Manager: Writes audit entry
+   
+6. Ledger entry created with ULID
+
+🚀 IMPLEMENTATION PRIORITY
+Phase 1: Foundation (Weeks 1-2)
+Core modules + essential plugins:
+
+Pipeline Orchestrator (core)
+Ledger Manager (core)
+Git Operations (core)
+Validator Engine (core + 5 plugins)
+Generator (core)
+
+Total: 4 core + 5 plugins = 19 artifacts
+Phase 2: File Operations (Weeks 3-4)
+
+File Classifier (6 plugins)
+Auto-Fix Suite (8 plugins)
+Quarantine Manager (5 plugins)
+
+Total: 19 plugins = 133 artifacts
+Phase 3: Merge Operations (Weeks 5-6)
+
+Sync Guardian (core + 3 plugins)
+Conflict Resolver (8 plugins)
+Quality Gates (10 plugins)
+Post-Merge (6 plugins)
+
+Total: 1 core + 27 plugins = 191 artifacts
+Phase 4: Operations (Week 7)
+
+Policy Enforcer (core + 2 plugins)
+Observability (7 plugins)
+
+Total: 1 core + 9 plugins = 65 artifacts
+
+
+
+
+
+
+
+
+NW_Complete Modular Architecture
+TIER 1: CORE MODULES (Sacred/Privileged)
+Module 1: Pipeline Orchestrator
+Purpose: Main event loop; dispatches lifecycle events to plugins
+Deliverables:
+•
+•
+•
+•
+•
+•
+
+core/orchestrator.py - Main runner process
+core/event_dispatcher.py - Routes events to registered plugins
+core/plugin_loader.py - Discovers and loads valid plugins
+
+Event schemas (JSON) for each lifecycle hook
+Startup/shutdown procedures
+Error isolation wrappers (catch plugin failures)
+
+Key Contracts:
+dispatch_event(event_name: str, payload: dict) -> list[PluginProposal]
+load_plugins(registry_path: Path) -> dict[str, Plugin]
+isolate_execution(plugin: Plugin, event: Event) -> Result
+
+Module 2: Ledger Manager
+Purpose: Append-only audit trail; ULID assignment; provenance tracking
+Deliverables:
+•
+•
+•
+•
+•
+•
+
+core/ledger_writer.py - JSONL append-only writer
+core/ledger_query.py - Query interface (read-only)
+core/ulid_generator.py - ULID creation with Two-ID system
+.runs/ledger.jsonl - Main ledger file
+
+Ledger schema validation (JSON Schema)
+Rollback reference index
+
+Key Contracts:
+write_entry(event: Event, actor: str, proposals: list, result: Result) ->
+ULID
+query_by_ulid(ulid: str) -> LedgerEntry
+query_by_timerange(start: datetime, end: datetime) -> list[LedgerEntry]
+get_rollback_target(ulid: str) -> dict # before-state snapshot
+
+Module 3: Git Operations Manager
+Purpose: All Git commands; branch creation; merge execution; snapshot tagging
+Deliverables:
+•
+•
+•
+•
+•
+•
+
+core/git_ops.py - Git command wrappers
+core/branch_manager.py - Reconciliation branch logic
+core/snapshot_tagger.py - Tag rollback points
+core/merge_executor.py - Applies approved merge strategies
+Git config templates (.gitattributes, .gitconfig)
+Merge policy schema (policy_pack.json)
+
+Key Contracts:
+create_reconcile_branch(name: str, base: str) -> Branch
+merge_with_strategy(source: Branch, target: Branch, strategy: str) ->
+MergeResult
+tag_rollback_point(commit_sha: str, ulid: str) -> Tag
+restore_to_snapshot(tag: str) -> RestoreResult
+
+Module 4: Sync Guardian
+Purpose: Local ↔ GitHub reconciliation; conflict-free sync
+Deliverables:
+•
+•
+•
+•
+•
+
+core/sync_auditor.py - Generates reconciliation reports
+core/sync_reconciler.py - Creates sync branches
+.runs/sync/<ULID>.json - Sync reports (timestamped)
+
+Sync policy rules (what triggers sync)
+Collision detection logic
+
+Key Contracts:
+audit_sync_state() -> SyncReport # local-only, remote-only, conflicts
+create_sync_branch(report: SyncReport) -> Branch
+reconcile_differences(sync_branch: Branch) -> ReconcileResult
+
+Report Schema:
+{
+"local_only_files": ["path/to/file.py"],
+"remote_only_commits": ["abc123"],
+"conflicts": [{"path": "...", "reason": "both_modified"}],
+"recommended_action": "merge_remote_first"
+}
+
+Module 5: Plugin Registry & Loader
+Purpose: Discover plugins; validate against contract; maintain enabled list
+Deliverables:
+•
+•
+•
+•
+•
+
+core/plugin_registry.py - Central registry of all plugins
+core/plugin_validator.py - Pre-flight checks
+plugins/registry.json - List of enabled plugins
+
+Plugin lifecycle hooks mapping
+Plugin dependency resolution
+
+Key Contracts:
+discover_plugins(plugins_dir: Path) -> list[PluginSpec]
+validate_plugin(plugin_path: Path) -> ValidationResult
+register_plugin(spec: PluginSpec) -> bool
+get_plugins_for_event(event_name: str) -> list[Plugin]
+
+Module 6: Validator Engine
+Purpose: Enforce Operating Contract; reject non-compliant plugins
+Deliverables:
+•
+•
+•
+•
+•
+
+core/validate_plugin.py - Main validation script
+
+Validation rules library
+core/contract_checker.py - Checks against OPERATING_CONTRACT.md
+
+Validation report templates
+SafePatch region detector
+
+Key Contracts:
+validate_plugin_structure(plugin_dir: Path) -> ValidationResult
+check_required_artifacts(plugin_dir: Path) -> list[str] # missing files
+validate_handler_signature(handler_file: Path, event: str) -> bool
+check_safepatch_boundaries(handler_file: Path) -> bool
+static_security_scan(handler_file: Path) -> list[SecurityViolation]
+
+Module 7: Generator/Scaffold Engine
+Purpose: Creates complete plugin skeletons from plugin.spec.json
+
+Deliverables:
+•
+•
+•
+
+core/generate_plugin_scaffold.py - Main generator
+core/templates/ - Template files for each artifact
+
+Generated artifacts per plugin:
+o
+o
+o
+o
+o
+o
+
+manifest.json
+policy_snapshot.json
+ledger_contract.json
+README_PLUGIN.md
+healthcheck.md
+handler.py or handler.ps1 (with AUTO regions)
+
+Key Contracts:
+generate_scaffold(spec_file: Path) -> Path # returns plugin directory
+render_template(template: str, context: dict) -> str
+create_handler_stub(event: str, language: str) -> str
+generate_all_docs(spec: PluginSpec) -> dict[str, str] # filename -> content
+
+Module 8: Policy Enforcement Engine
+Purpose: Reads policy_pack.json; enforces allowed actions per event
+Deliverables:
+•
+•
+•
+•
+
+core/policy_enforcer.py - Policy checker
+core/policy_pack.json - Machine-readable policy rules
+
+Policy schema validation
+Action allowlist/denylist per lifecycle event
+
+Key Contracts:
+load_policy(policy_file: Path) -> Policy
+check_proposal(proposal: Proposal, event: str, policy: Policy) -> bool
+get_allowed_actions(event: str) -> list[str]
+
+Policy Schema Example:
+{
+"lifecycle_events": {
+"FileDetected": {
+"allowed_actions": ["propose_move", "propose_quarantine",
+"propose_dedupe"],
+"forbidden_actions": ["delete_permanent", "commit_direct"]
+}
+}
+}
+
+TIER 2: PLUGIN MODULES (Extensible/Evolvable)
+Module 9: File Classifier/Organizer
+Purpose: Analyze files; determine correct module placement
+Deliverables:
+•
+•
+•
+•
+•
+
+plugins/file-classifier/handler.py
+plugins/file-classifier/module_registry.json - Keywords per module
+
+Classification logic (keyword matching)
+Deduplication rules (mtime, size, hash)
+All standard artifacts (manifest, policy snapshot, etc.)
+
+Lifecycle Event: FileDetected
+Input Contract:
+{
+"event": "FileDetected",
+"inputs": {
+"path": "new_file.py",
+"hash": "sha256:abc...",
+"size": 1234,
+"mime": "text/x-python",
+"mtime": "2025-10-27T12:00:00Z"
+}
+}
+
+Output Contract (Proposals):
+[
+{
+"action": "propose_move",
+"payload": {
+"from": "new_file.py",
+"to": "Goal_Normalizer_MOD/new_file.py",
+"confidence": 0.85,
+"reasoning": "File contains 'normalize' and 'goal' keywords"
+}
+}
+]
+
+Module 10: Conflict Resolver Suite
+Purpose: Deterministic conflict resolution strategies
+Deliverables:
+
+•
+•
+•
+•
+•
+
+plugins/conflict-resolver-ours/handler.py - "Take ours" strategy
+plugins/conflict-resolver-theirs/handler.py - "Take theirs" strategy
+plugins/conflict-resolver-smart-merge/handler.py - Content-aware merge
+
+Strategy priority configuration
+Conflict pattern library
+
+Lifecycle Event: MergeConflict
+Input Contract:
+{
+"event": "MergeConflict",
+"inputs": {
+"file": "src/config.py",
+"ours_content": "...",
+"theirs_content": "...",
+"base_content": "...",
+"conflict_type": "content"
+}
+}
+
+Output Contract:
+[
+{
+"action": "propose_resolution",
+"payload": {
+"strategy": "take_ours",
+"confidence": 0.9,
+"reasoning": "Local changes newer and tested",
+"risk_factors": []
+}
+}
+]
+
+Module 11: Pre-Merge Quality Gates
+Purpose: Run checks before allowing merge
+Deliverables:
+•
+•
+•
+•
+•
+
+plugins/pre-merge-lint/handler.py - Linting check
+plugins/pre-merge-test/handler.py - Test runner
+plugins/pre-merge-format/handler.py - Code formatter
+
+Integration with Ruff, Black, Pylint, PSScriptAnalyzer
+Pass/fail/warn reporting
+
+Lifecycle Event: PreMerge
+
+Input Contract:
+{
+"event": "PreMerge",
+"inputs": {
+"source_branch": "feature/new-thing",
+"target_branch": "main",
+"files_changed": ["src/foo.py", "src/bar.py"]
+}
+}
+
+Output Contract:
+[
+{
+"action": "propose_gate_result",
+"payload": {
+"gate_name": "lint",
+"status": "pass",
+"details": {"violations": 0},
+"blocking": false
+}
+}
+]
+
+Module 12: Post-Merge Validators
+Purpose: Verify merge success; trigger notifications
+Deliverables:
+•
+•
+•
+•
+
+plugins/post-merge-notify/handler.py - Notification sender
+plugins/post-merge-validate/handler.py - Schema/syntax check
+plugins/post-merge-cleanup/handler.py - Temp branch deletion
+
+Integration with Slack/Discord/email
+
+Lifecycle Event: PostMerge
+
+Module 13: Quarantine Manager
+Purpose: Handle failed/ambiguous operations
+Deliverables:
+•
+•
+
+plugins/quarantine-handler/handler.py
+Quarantine directory structure (QUARANTINE_UNCLASSIFIED/, etc.)
+
+•
+•
+
+Review instructions generator
+Pattern signature extractor (for future learning)
+
+Lifecycle Event: QuarantineCreated
+
+Module 14: Auto-Fix/Format Suite
+Purpose: Automated corrections for known issues
+Deliverables:
+•
+•
+•
+•
+
+plugins/auto-fix-imports/handler.py - Import sorting (isort)
+plugins/auto-fix-whitespace/handler.py - Trailing whitespace
+plugins/auto-fix-formatting/handler.py - Black/Ruff auto-fix
+
+Known issue pattern library
+
+Lifecycle Event: FileDetected or PreMerge
+
+Module 15: Observability/Metrics
+Purpose: Health monitoring; performance tracking
+Deliverables:
+•
+•
+•
+•
+
+plugins/observability-health/handler.py - System health checks
+plugins/observability-metrics/handler.py - Performance metrics
+
+Dashboard data exporter (JSON)
+Alert threshold configuration
+
+Lifecycle Event: PostMerge or periodic timer
+
+TIER 3: SUPPORT MODULES
+Module 16: Module Registry
+Purpose: Central knowledge base of all modules and their domains
+Deliverables:
+
+•
+•
+•
+
+core/module_registry.json - Keywords, paths, extensions per module
+core/registry_updater.py - Add/remove modules
+
+Registry schema validation
+
+Schema Example:
+{
+"Goal_Normalizer_..._MOD": {
+"keywords": ["normalize", "goal", "capability", "constraint"],
+"allowed_extensions": [".py", ".ps1", ".md"],
+"path": "Goal_Normalizer_..._MOD/"
+}
+}
+
+Module 17: Documentation Generator
+Purpose: Living docs that sync with implementation
+Deliverables:
+•
+•
+•
+
+core/doc_generator.py - Template-based doc creation
+
+Templates for README, healthcheck, policy snapshot
+Markdown rendering utilities
+
+Module 18: Testing Framework
+Purpose: Validate plugins and core in isolation
+Deliverables:
+•
+•
+•
+•
+•
+
+tests/test_orchestrator.py - Core orchestrator tests
+tests/test_plugin_loader.py - Plugin loading tests
+tests/test_lifecycle_events.py - Event dispatch tests
+
+Per-plugin test template
+Mock event fixtures
+
+Complete Deliverables Summary by Module
+
+Module
+
+Generated
+Artifacts
+
+Core Files
+
+Pipeline
+orchestrator.py,
+Orchestrat
+event_dispatcher.py
+or
+Ledger
+ledger_writer.py,
+Manager ledger_query.py
+Git
+git_ops.py,
+Operations merge_executor.py
+Sync
+sync_auditor.py
+Guardian
+Plugin
+plugin_registry.py
+Registry
+
+Config Files
+
+Tests
+test_orchestrator.p
+y
+
+Event schemas
+
+-
+
+.runs/ledger.jsonl
+
+ledger_schema.jso
+test_ledger.py
+n
+
+Merge reports
+
+.gitattributes
+
+.runs/sync/*.json sync_policy.yaml
+
+test_git_ops.py
+test_sync.py
+
+plugins/registry.js
+test_registry.py
+on
+Validation
+validation_rules.js
+Validator validate_plugin.py
+test_validator.py
+reports
+on
+generate_plugin_scaffol All plugin
+Generator
+templates/
+test_generator.py
+d.py
+artifacts
+Policy
+policy_enforcer.py
+policy_pack.json test_policy.py
+Enforcer
+File
+manifest.json + 5 module_registry.js test_file_classifier
+plugins/file-classifier/*
+Classifier
+others
+on
+.py
+Conflict
+strategy_priority.y
+plugins/conflict-/
+6 artifacts each
+test_conflicts.py
+Resolvers
+aml
+Quality
+gate_thresholds.ya
+plugins/pre-merge-/
+6 artifacts each
+test_gates.py
+Gates
+ml
+
+Module Dependencies
+Pipeline Orchestrator
+├── Plugin Registry (loads plugins)
+├── Ledger Manager (writes audit trail)
+├── Git Operations (executes approved actions)
+├── Policy Enforcer (validates proposals)
+└── Event Dispatcher → All Plugins
+Sync Guardian
+├── Git Operations (for fetch/merge)
+└── Ledger Manager (logs sync actions)
+Generator
+├── Validator (checks generated artifacts)
+└── Module Registry (for classification hints)
+All Plugins
+├── Ledger Manager (via core interface)
+
+└── Policy Enforcer (action validation)
+
+Integration Points
+External Tool Integration:
+•
+•
+•
+•
+
+Aider + DeepSeek - Called by code-editing plugins
+Claude Code CLI - Task planning, codebase analysis
+Ruff/Black/Pylint - Called by quality gate plugins
+GitHub CLI - Called by Sync Guardian for remote ops
+
+Data Flows:
+1. File appears → Orchestrator detects → Dispatches FileDetected → File Classifier
+proposes → Core executes → Ledger records
+2. Merge conflict → Git Ops detects → Dispatches MergeConflict → Resolvers propose
+→ Core applies best → Ledger records
+3. Sync needed → Sync Guardian audits → Creates sync branch → Reconciles → Merges
+→ Ledger records
+
+This modular architecture ensures:
+•
+•
+•
+•
+•
+•
+
+Clear separation of concerns
+Each module has single responsibility
+Plugins can't break core
+AI can safely generate new plugins
+Complete audit trail
+Deterministic and reversible
+
+
