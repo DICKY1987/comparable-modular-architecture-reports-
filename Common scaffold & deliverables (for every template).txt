@@ -1,0 +1,199 @@
+Here you go—short and clear:
+
+* **plugin.spec.json** — Single source of truth for the plugin (name, version, events handled, allowed actions, config schema). Drives codegen, docs, and validation.
+* **manifest.json** — Runtime-ready, derived manifest (entry points, compatibility, capabilities, checksums). What the loader/orchestrator reads to wire the plugin.
+* **ledger_contract.json** — Audit/telemetry schema the plugin must emit (fields, types, required keys). Ensures consistent, queryable logs across plugins.
+* **policy_snapshot.json** — Frozen, resolved policies (security, quality, performance) at generation time. Makes runs reproducible and reviewable.
+* **README_PLUGIN.md** — Human-facing quickstart: purpose, inputs/outputs, config options, examples. Generated from the spec to prevent drift.
+* **healthcheck.md** — Expected probes and pass/fail criteria (what to run, what “healthy” means). Used by local/CI smoke checks.
+* **src/** *(handler with AUTO fences)* — Implementation stub where AUTO-fenced blocks are tool-managed and safe areas are developer-owned.
+* **tests/** *(unit + contract)* — Minimal tests that assert API/contract behavior and core logic; run locally and in CI gates.
+* **conformance area** *(schemas + behavior/perf tests)* — Extended suite (schema fixtures, BDD scenarios, load/perf budgets) used to certify the plugin beyond basics.
+
+
+Per-plugin (now baseline, present in every plugin folder)
+
+schemas/<op>.in.schema.json and schemas/<op>.out.schema.json (contracted I/O for each operation).
+
+examples/<op>_request.json and examples/<op>_response.json (canonical fixtures tied to those schemas).
+
+tests/test_<op>.py (unit test skeleton per operation; conformance begins here).
+
+Example shown for PLG_ID_MINT: manifest.yaml, README.md, src/plg_id_mint/mint.py, plus the schema/example/test trio above.
+
+Repo-level (shared, required by all ID plugins)
+
+Identity stores (authoritative & generated)
+
+ids/cards/<ULID>.yaml (ID Cards, committed).
+
+.ledger/ids.jsonl (append-only provenance, committed).
+
+ids/registry.yaml (generated on merge/release; baseline deliverable of the module).
+
+Module scripts (enforced in CI and locally)
+
+scripts/ids/ensure_immutability.py, scripts/ids/validate_structure.py, scripts/ids/build_registry.py.
+
+CI pipelines (policy + release)
+
+.github/workflows/id-guard.yml (PR: schema/immutability/uniqueness/one-artifact rule).
+
+.github/workflows/id-post-merge.yml (rebuilds registry, pushes immutable tags).
+
+.github/workflows/id-release.yml (packages plugins, publishes docs).
+
+Optional/Generated (tracked as outputs, not hand-edited)
+
+.runs/<RUN_ID>/ids.json (runtime snapshot produced by smoke jobs).
+
+Think of a plugin’s files in **four buckets**. The first bucket is mostly fixed; the other three expand or shrink based on what the plugin does and where it runs.
+
+# 1) Fixed “identity & docs” (usually constant)
+
+These exist once per plugin and rarely change in count:
+
+* `plugin.spec.json` — the source-of-truth spec.
+* `manifest.json` — derived, what the runtime loads.
+* `policy_snapshot.json` — resolved policies at generation time.
+* `ledger_contract.json` — telemetry/audit schema.
+* `README_PLUGIN.md`, `healthcheck.md` — human docs.
+* `src/handler.*` — the main entry (can split later, see below).
+
+> These six–seven items are your baseline. Their **presence** is stable; their **content** changes.
+
+# 2) Code & adapters (grows with responsibilities)
+
+Files in `src/` (and sometimes `adapters/`, `utils/`) scale with implementation choices:
+
+* **More events handled** → you might split into `src/handlers/<event>.py` or keep one file and add functions.
+* **More external ports** (e.g., S3, FS, HTTP) → one adapter per port: `adapters/s3.py`, `adapters/http.py`.
+* **Shared helpers** → `utils/validation.py`, `utils/mappings.py`.
+* **Language-specific packaging** (optional) → `pyproject.toml`, `setup.cfg` (Python) or `package.json` (Node).
+
+> **What makes it fluctuate:** number of events, number of integrations (ports/adapters), desire to keep files small & cohesive (single-responsibility).
+
+# 3) Tests, fixtures, and schemas (the main variable)
+
+Most file-count growth happens here. You can keep many tests in a few files, or split them finely.
+
+* **Unit/contract tests** (`tests/unit/*`, `tests/contract/*`)
+
+  * More behaviors ⇒ more test cases. You can group many in one file or split per topic.
+* **Behavior/BDD tests** (`conformance/behavior/*.feature`)
+
+  * Each scenario can live in one `.feature` file; multiple scenarios can share one file.
+* **Fixtures/golden data** (`conformance/fixtures/*.json`)
+
+  * Each distinct input/output case usually gets its own JSON. More edge cases ⇒ more files.
+* **Perf/soak budgets & results** (`conformance/perf/budget.yml`, generated reports)
+
+  * One budget file is typical; you may add separate budgets per environment/size class.
+* **Schemas** (`schemas/*.json`)
+
+  * Each message/entity type you validate against tends to be its own JSON Schema file.
+
+> **What makes it fluctuate:**
+>
+> * Number of **events** and **edge cases** you want to prove.
+> * Number of **data formats/entities** (each often needs a schema + fixtures).
+> * Number of **integration points** (each gets integration tests + fixtures).
+> * **Quality level** (more negative tests, fuzz/property tests, perf tests).
+> * **Environments** (matrix testing: dev/prod/hardened can add param files).
+
+# 4) Ops, policy, and release scaffolding (optional but common)
+
+These appear as you harden the plugin:
+
+* **Policy overrides** (per-plugin) → `policy/local_overrides.yml` (if needed).
+* **Observability** → local OTel collector config, log samples.
+* **Packaging/release** → `Makefile`, `noxfile.py`, `Dockerfile` (if you containerize), SBOM generation configs.
+* **CI helpers** (per plugin) → minimal workflow or reuse central CI (prefer central to avoid duplication).
+* **Examples & samples** → `examples/*.md`, extra fixtures for docs.
+
+> **What makes it fluctuate:** whether the plugin needs local policy tweaks, containerization, dedicated CI, or runnable examples.
+
+---
+
+## Concrete “actions → files” mapping (what adds files)
+
+* **Add a new event to handle**
+  → likely +1 handler (or function) and **+ tests** (unit + at least 2–4 fixtures), optionally +1 schema if the event payload is new.
+* **Add a new external integration (port/adapter)**
+  → +1 adapter file, + integration tests, + fixtures; maybe credentials/config samples.
+* **Support a new data format or entity**
+  → +1 schema file, + fixtures, + mapping/validation helpers, + contract tests.
+* **Tighten security or compliance**
+  → possibly + policy override file, + extra negative tests, + license/SBOM checks.
+* **Add performance SLO**
+  → + perf budget file, + perf test harness config, + generated result artifacts (not committed).
+* **Add runtime/OS variants**
+  → + small config files per variant, or parametrize tests (file count impact depends on your style).
+* **Raise test depth (property/fuzz/chaos)**
+  → sometimes + harness config; often the **same test files** but many more cases.
+
+---
+
+## Patterns that influence file counts
+
+* **Single-file handler vs. per-event handlers**: per-event files give clarity and test isolation but increase count.
+* **One-test-file-per-layer vs. per-feature**: you can keep a lean test tree (fewer files, more cases each) or split by feature (more files, clearer reports).
+* **Fixture-per-case vs. parametrized cases**: parametrized tests reduce fixture files; per-case fixtures increase them but improve readability/audit.
+* **Shared adapters vs. dedicated adapters**: shared adapters keep counts down but may mix concerns.
+
+---
+
+## Rules of thumb (quick estimator)
+
+Let:
+
+* `E` = number of distinct events handled
+* `A` = number of external adapters/ports
+* `F` = number of distinct data formats/entities (schemas)
+* `C` = coverage level (1=minimal, 2=standard, 3=hardening)
+
+**Approx test/fixture file count target (not a law):**
+
+```
+tests_total ≈ 2 (base unit/contract files)
+            + ceil(E / 2)         # group two events per test file
+            + A                   # one integration test file per adapter
+fixtures    ≈ 2*E                 # two golden cases per event (happy + edge)
+schemas     ≈ F
+```
+
+Increase each line by ~50% when C=3 (hardening) due to negative/property/perf cases. You can compress by grouping multiple cases into the same files.
+
+---
+
+## Example sizes
+
+**Minimal plugin** (1 event, 0 adapters, 1 format): ~10–14 files total
+
+* Baseline identity/docs (6–7), `src/handler.py`, `tests/` (2 files), `conformance/fixtures` (2 JSON), `schemas/` (1).
+
+**Standard plugin** (2–3 events, 1 adapter, 2 formats): ~16–26 files
+
+* Adds `adapters/http.py`, 2–3 more fixtures, 1–2 more tests, extra schema.
+
+**Integration-heavy plugin** (4–6 events, 3 adapters, 3–4 formats, hardened): 30–60+ files
+
+* Per-adapter tests & fixtures, more schemas, perf budget, property/chaos tests.
+
+---
+
+## How to keep counts sane (without losing rigor)
+
+* **Parametrize** tests; share fixtures when safe.
+* **Adopt a test file template** per layer to avoid proliferation.
+* **Centralize CI/policy** in the core; keep per-plugin CI minimal.
+* **Generate** docs/manifests from `plugin.spec.json` to avoid extra doc files.
+* **Gate on coverage & SLO** rather than “more files,” so teams don’t split files just to look busy.
+
+---
+
+### Bottom line
+
+* The **baseline** is stable (identity/docs).
+* File counts **fluctuate with scope**: events, adapters, data formats, and the quality bar you set.
+* You control growth via **how you group tests**, **how many fixtures you keep**, and whether you **split handlers/adapters** for clarity.
