@@ -1,0 +1,699 @@
+eafix-modular: Complete Modular Architecture
+Section 1: TIER 1: CORE MODULES (Sacred/Privileged)
+Module 1: Pipeline Orchestrator
+Purpose: Main event loop that detects lifecycle events and dispatches them to registered plugins with isolation and auditing.
+
+Deliverables:
+
+core/orchestrator.py - Main runner and event loop
+core/event_dispatcher.py - Routes lifecycle events to enabled plugins
+core/plugin_loader.py - Discovers and loads valid plugins
+Event schemas (JSON) for each lifecycle hook
+Startup/shutdown procedures
+Error isolation wrappers to catch plugin failures
+Key Contracts:
+
+Python
+from pathlib import Path
+from typing import Dict, List
+
+dispatch_event(event_name: str, payload: dict) -> list[PluginProposal]
+load_plugins(registry_path: Path) -> dict[str, Plugin]
+isolate_execution(plugin: Plugin, event: Event) -> Result
+
+# Event Schema (example)
+# FileDetected
+{
+  "event": "FileDetected",
+  "inputs": {
+    "path": "string",
+    "hash": "string",
+    "size": 0,
+    "mime": "string",
+    "mtime": "iso8601-timestamp"
+  }
+}
+Core Module Identification Criteria:
+
+Controls privileged operations (file system, database, security)
+Cannot be disabled without breaking the system
+Other modules depend on it
+Handles critical data or state
+Enforces system-wide rules or policies
+Module 2: Ledger Manager
+Purpose: Provides an append-only audit trail with ULID assignment and provenance tracking for all operations.
+
+Deliverables:
+
+core/ledger_writer.py - JSONL append-only writer
+core/ledger_query.py - Read-only query interface
+core/ulid_generator.py - ULID creation with Two-ID system
+.runs/ledger.jsonl - Main ledger file (append-only)
+Ledger schema validation (JSON Schema)
+Rollback reference index
+Key Contracts:
+
+Python
+from datetime import datetime
+
+write_entry(event: Event, actor: str, proposals: list, result: Result) -> str  # ULID
+query_by_ulid(ulid: str) -> LedgerEntry
+query_by_timerange(start: datetime, end: datetime) -> list[LedgerEntry]
+get_rollback_target(ulid: str) -> dict  # before-state snapshot
+
+# Ledger Entry Schema (example)
+{
+  "ulid": "01HXY...XYZ",
+  "timestamp": "iso8601-timestamp",
+  "event": "string",
+  "actor": "string",
+  "inputs": { },
+  "proposals": [ { "action": "string", "payload": { } } ],
+  "result": { "status": "success|failure", "details": { } },
+  "before_state_ref": "optional-ref"
+}
+Core Module Identification Criteria:
+
+Controls privileged operations (file system, database, security)
+Cannot be disabled without breaking the system
+Other modules depend on it
+Handles critical data or state
+Enforces system-wide rules or policies
+Module 3: Git Operations Manager
+Purpose: Encapsulates all Git commands including branch creation, merge execution, and snapshot tagging/restoration.
+
+Deliverables:
+
+core/git_ops.py - Git command wrappers
+core/branch_manager.py - Reconciliation branch logic
+core/snapshot_tagger.py - Tag rollback points
+core/merge_executor.py - Applies approved merge strategies
+Git config templates (.gitattributes, .gitconfig)
+Merge policy schema (policy_pack.json)
+Key Contracts:
+
+Python
+create_reconcile_branch(name: str, base: str) -> Branch
+merge_with_strategy(source: Branch, target: Branch, strategy: str) -> MergeResult
+tag_rollback_point(commit_sha: str, ulid: str) -> Tag
+restore_to_snapshot(tag: str) -> RestoreResult
+
+# Merge Policy Schema (excerpt)
+{
+  "merge_strategies": ["fast-forward", "squash", "rebase", "ours", "theirs"],
+  "constraints": { "protected_branches": ["main", "release/*"] }
+}
+Core Module Identification Criteria:
+
+Controls privileged operations (file system, database, security)
+Cannot be disabled without breaking the system
+Other modules depend on it
+Handles critical data or state
+Enforces system-wide rules or policies
+Module 4: Sync Guardian
+Purpose: Audits local vs. GitHub state and produces conflict-free reconciliation via dedicated sync branches.
+
+Deliverables:
+
+core/sync_auditor.py - Generates reconciliation reports
+core/sync_reconciler.py - Creates sync branches
+.runs/sync/<ULID>.json - Timestamped sync reports
+Sync policy rules (what triggers sync)
+Collision detection logic
+Key Contracts:
+
+Python
+audit_sync_state() -> SyncReport  # local-only, remote-only, conflicts
+create_sync_branch(report: SyncReport) -> Branch
+reconcile_differences(sync_branch: Branch) -> ReconcileResult
+
+# Sync Report Schema
+{
+  "local_only_files": ["path/to/file.py"],
+  "remote_only_commits": ["abc123"],
+  "conflicts": [{"path": "...", "reason": "both_modified"}],
+  "recommended_action": "merge_remote_first"
+}
+Core Module Identification Criteria:
+
+Controls privileged operations (file system, database, security)
+Cannot be disabled without breaking the system
+Other modules depend on it
+Handles critical data or state
+Enforces system-wide rules or policies
+Module 5: Plugin Registry & Loader
+Purpose: Discovers plugins, validates against contracts, and maintains the list of enabled plugins per lifecycle hook.
+
+Deliverables:
+
+core/plugin_registry.py - Central registry of all plugins
+core/plugin_validator.py - Pre-flight checks
+plugins/registry.json - List of enabled plugins
+Plugin lifecycle hooks mapping
+Plugin dependency resolution
+Key Contracts:
+
+Python
+from pathlib import Path
+
+discover_plugins(plugins_dir: Path) -> list[PluginSpec]
+validate_plugin(plugin_path: Path) -> ValidationResult
+register_plugin(spec: PluginSpec) -> bool
+get_plugins_for_event(event_name: str) -> list[Plugin]
+Core Module Identification Criteria:
+
+Controls privileged operations (file system, database, security)
+Cannot be disabled without breaking the system
+Other modules depend on it
+Handles critical data or state
+Enforces system-wide rules or policies
+Module 6: Validator Engine
+Purpose: Enforces the Operating Contract; rejects non-compliant plugins via structural, contract, and security checks.
+
+Deliverables:
+
+core/validate_plugin.py - Main validation script
+Validation rules library
+core/contract_checker.py - Checks against OPERATING_CONTRACT.md
+Validation report templates
+SafePatch region detector
+Key Contracts:
+
+Python
+from pathlib import Path
+
+validate_plugin_structure(plugin_dir: Path) -> ValidationResult
+check_required_artifacts(plugin_dir: Path) -> list[str]  # missing files
+validate_handler_signature(handler_file: Path, event: str) -> bool
+check_safepatch_boundaries(handler_file: Path) -> bool
+static_security_scan(handler_file: Path) -> list[SecurityViolation]
+Core Module Identification Criteria:
+
+Controls privileged operations (file system, database, security)
+Cannot be disabled without breaking the system
+Other modules depend on it
+Handles critical data or state
+Enforces system-wide rules or policies
+Module 7: Generator/Scaffold Engine
+Purpose: Generates complete plugin skeletons from plugin.spec.json and produces all required artifacts.
+
+Deliverables:
+
+core/generate_plugin_scaffold.py - Main generator
+core/templates/ - Template files for each artifact
+Generated artifacts per plugin:
+manifest.json
+policy_snapshot.json
+ledger_contract.json
+README_PLUGIN.md
+healthcheck.md
+handler.py or handler.ps1 (with AUTO regions)
+Key Contracts:
+
+Python
+from pathlib import Path
+
+generate_scaffold(spec_file: Path) -> Path  # returns plugin directory
+render_template(template: str, context: dict) -> str
+create_handler_stub(event: str, language: str) -> str
+generate_all_docs(spec: PluginSpec) -> dict[str, str]  # filename -> content
+Core Module Identification Criteria:
+
+Controls privileged operations (file system, database, security)
+Cannot be disabled without breaking the system
+Other modules depend on it
+Handles critical data or state
+Enforces system-wide rules or policies
+Module 8: Policy Enforcement Engine
+Purpose: Loads and enforces machine-readable policy rules per lifecycle event, validating plugin proposals before execution.
+
+Deliverables:
+
+core/policy_enforcer.py - Policy checker
+core/policy_pack.json - Machine-readable policy rules
+Policy schema validation
+Action allowlist/denylist per lifecycle event
+Key Contracts:
+
+Python
+load_policy(policy_file: Path) -> Policy
+check_proposal(proposal: Proposal, event: str, policy: Policy) -> bool
+get_allowed_actions(event: str) -> list[str]
+
+# Policy Schema Example
+{
+  "lifecycle_events": {
+    "FileDetected": {
+      "allowed_actions": ["propose_move", "propose_quarantine", "propose_dedupe"],
+      "forbidden_actions": ["delete_permanent", "commit_direct"]
+    }
+  }
+}
+Core Module Identification Criteria:
+
+Controls privileged operations (file system, database, security)
+Cannot be disabled without breaking the system
+Other modules depend on it
+Handles critical data or state
+Enforces system-wide rules or policies
+Section 2: TIER 2: PLUGIN/EXTENSION MODULES (Extensible/Evolvable)
+Module 9: File Classifier/Organizer
+Purpose: Analyzes files and proposes correct module placement including deduplication and classification.
+
+Deliverables:
+
+plugins/file-classifier/handler.py
+plugins/file-classifier/module_registry.json - Keywords per module
+Classification logic (keyword matching)
+Deduplication rules (mtime, size, hash)
+Standard plugin artifacts (manifest, policy snapshot, etc.)
+FileDetected: Triggered when a new or modified file is detected.
+
+Input Contract:
+
+JSON
+{
+  "event": "FileDetected",
+  "inputs": {
+    "path": "new_file.py",
+    "hash": "sha256:abc...",
+    "size": 1234,
+    "mime": "text/x-python",
+    "mtime": "2025-10-27T12:00:00Z"
+  }
+}
+Output Contract:
+
+JSON
+[
+  {
+    "action": "propose_move",
+    "payload": {
+      "from": "new_file.py",
+      "to": "Goal_Normalizer_MOD/new_file.py",
+      "confidence": 0.85,
+      "reasoning": "File contains 'normalize' and 'goal' keywords"
+    }
+  }
+]
+Plugin/Extension Identification Criteria:
+
+Can be added/removed without breaking core
+Extends functionality rather than providing foundation
+Implements a specific feature or capability
+May have multiple implementations for same purpose
+Often user-configurable or optional
+Module 10: Conflict Resolver Suite
+Purpose: Provides deterministic conflict resolution strategies for merges.
+
+Deliverables:
+
+plugins/conflict-resolver-ours/handler.py - "Take ours" strategy
+plugins/conflict-resolver-theirs/handler.py - "Take theirs" strategy
+plugins/conflict-resolver-smart-merge/handler.py - Content-aware merge
+Strategy priority configuration
+Conflict pattern library
+MergeConflict: Triggered when merge conflicts are detected.
+
+Input Contract:
+
+JSON
+{
+  "event": "MergeConflict",
+  "inputs": {
+    "file": "src/config.py",
+    "ours_content": "...",
+    "theirs_content": "...",
+    "base_content": "...",
+    "conflict_type": "content"
+  }
+}
+Output Contract:
+
+JSON
+[
+  {
+    "action": "propose_resolution",
+    "payload": {
+      "strategy": "take_ours",
+      "confidence": 0.9,
+      "reasoning": "Local changes newer and tested",
+      "risk_factors": []
+    }
+  }
+]
+Plugin/Extension Identification Criteria:
+
+Can be added/removed without breaking core
+Extends functionality rather than providing foundation
+Implements a specific feature or capability
+May have multiple implementations for same purpose
+Often user-configurable or optional
+Module 11: Pre-Merge Quality Gates
+Purpose: Runs linting, tests, and formatting checks before allowing merges.
+
+Deliverables:
+
+plugins/pre-merge-lint/handler.py - Linting check
+plugins/pre-merge-test/handler.py - Test runner
+plugins/pre-merge-format/handler.py - Code formatter
+Integration with Ruff, Black, Pylint, PSScriptAnalyzer
+Pass/fail/warn reporting
+PreMerge: Triggered before merges to validate quality gates.
+
+Input Contract:
+
+JSON
+{
+  "event": "PreMerge",
+  "inputs": {
+    "source_branch": "feature/new-thing",
+    "target_branch": "main",
+    "files_changed": ["src/foo.py", "src/bar.py"]
+  }
+}
+Output Contract:
+
+JSON
+[
+  {
+    "action": "propose_gate_result",
+    "payload": {
+      "gate_name": "lint",
+      "status": "pass",
+      "details": {"violations": 0},
+      "blocking": false
+    }
+  }
+]
+Plugin/Extension Identification Criteria:
+
+Can be added/removed without breaking core
+Extends functionality rather than providing foundation
+Implements a specific feature or capability
+May have multiple implementations for same purpose
+Often user-configurable or optional
+Module 12: Post-Merge Validators
+Purpose: Verifies merge success, sends notifications, and performs cleanup.
+
+Deliverables:
+
+plugins/post-merge-notify/handler.py - Notification sender
+plugins/post-merge-validate/handler.py - Schema/syntax check
+plugins/post-merge-cleanup/handler.py - Temporary branch deletion
+Integration with Slack/Discord/email
+PostMerge: Triggered after successful merges.
+
+Input Contract:
+
+JSON
+{
+  "event": "PostMerge",
+  "inputs": {
+    "merge_commit": "abc123",
+    "source_branch": "feature/new-thing",
+    "target_branch": "main",
+    "files_changed": ["..."]
+  }
+}
+Output Contract:
+
+JSON
+[
+  {
+    "action": "propose_notify",
+    "payload": {
+      "channels": ["slack"],
+      "message": "Merge completed: abc123",
+      "severity": "info"
+    }
+  },
+  {
+    "action": "propose_cleanup",
+    "payload": {
+      "branches_to_delete": ["feature/new-thing"],
+      "safe_to_delete": true
+    }
+  }
+]
+Plugin/Extension Identification Criteria:
+
+Can be added/removed without breaking core
+Extends functionality rather than providing foundation
+Implements a specific feature or capability
+May have multiple implementations for same purpose
+Often user-configurable or optional
+Module 13: Quarantine Manager
+Purpose: Handles failed or ambiguous operations by moving artifacts into quarantine and generating review instructions.
+
+Deliverables:
+
+plugins/quarantine-handler/handler.py
+Quarantine directory structure (QUARANTINE_UNCLASSIFIED/, etc.)
+Review instructions generator
+Pattern signature extractor (for future learning)
+QuarantineCreated: Triggered when quarantine actions are initiated.
+
+Input Contract:
+
+JSON
+{
+  "event": "QuarantineCreated",
+  "inputs": {
+    "reason": "validation_failed",
+    "paths": ["path/to/file.py"],
+    "signatures": ["pattern_xyz"]
+  }
+}
+Output Contract:
+
+JSON
+[
+  {
+    "action": "propose_quarantine_plan",
+    "payload": {
+      "destination": "QUARANTINE_UNCLASSIFIED/",
+      "review_instructions": "Check schema violations",
+      "signatures_extracted": ["pattern_xyz"]
+    }
+  }
+]
+Plugin/Extension Identification Criteria:
+
+Can be added/removed without breaking core
+Extends functionality rather than providing foundation
+Implements a specific feature or capability
+May have multiple implementations for same purpose
+Often user-configurable or optional
+Module 14: Auto-Fix/Format Suite
+Purpose: Performs automated corrections for known issues such as import sorting, whitespace, and formatting.
+
+Deliverables:
+
+plugins/auto-fix-imports/handler.py - Import sorting (isort)
+plugins/auto-fix-whitespace/handler.py - Trailing whitespace fixes
+plugins/auto-fix-formatting/handler.py - Black/Ruff auto-fix
+Known issue pattern library
+FileDetected / PreMerge: Triggered on file detection or before merge gates.
+
+Input Contract:
+
+JSON
+{
+  "event": "PreMerge",
+  "inputs": {
+    "files_changed": ["src/foo.py"]
+  }
+}
+Output Contract:
+
+JSON
+[
+  {
+    "action": "propose_auto_fix",
+    "payload": {
+      "tool": "black",
+      "applied_to": ["src/foo.py"],
+      "changes": [{"path": "src/foo.py", "diff": "..."}],
+      "confidence": 0.95
+    }
+  }
+]
+Plugin/Extension Identification Criteria:
+
+Can be added/removed without breaking core
+Extends functionality rather than providing foundation
+Implements a specific feature or capability
+May have multiple implementations for same purpose
+Often user-configurable or optional
+Module 15: Observability/Metrics
+Purpose: Performs health monitoring and performance tracking with dashboard exports and alert thresholds.
+
+Deliverables:
+
+plugins/observability-health/handler.py - System health checks
+plugins/observability-metrics/handler.py - Performance metrics
+Dashboard data exporter (JSON)
+Alert threshold configuration
+PostMerge / Timer: Triggered after merges or on periodic timers.
+
+Input Contract:
+
+JSON
+{
+  "event": "Timer",
+  "inputs": {
+    "schedule": "cron(0/5 * * * *)",
+    "metrics": ["latency", "throughput"]
+  }
+}
+Output Contract:
+
+JSON
+[
+  {
+    "action": "propose_metric_emit",
+    "payload": {
+      "series": "pipeline.latency",
+      "value": 123.4,
+      "tags": {"module": "orchestrator"},
+      "export": "dashboard.json"
+    }
+  }
+]
+Plugin/Extension Identification Criteria:
+
+Can be added/removed without breaking core
+Extends functionality rather than providing foundation
+Implements a specific feature or capability
+May have multiple implementations for same purpose
+Often user-configurable or optional
+Section 3: TIER 3: SUPPORT MODULES
+Module 16: Module Registry
+Purpose: Central knowledge base of modules, domains, keywords, and allowed file extensions/paths.
+
+Deliverables:
+
+core/module_registry.json - Keywords, paths, extensions per module
+core/registry_updater.py - Add/remove modules
+Registry schema validation
+Schema Example:
+
+JSON
+{
+  "Goal_Normalizer_..._MOD": {
+    "keywords": ["normalize", "goal", "capability", "constraint"],
+    "allowed_extensions": [".py", ".ps1", ".md"],
+    "path": "Goal_Normalizer_..._MOD/"
+  }
+}
+Support Module Identification Criteria:
+
+Provides utilities or helpers
+Used by multiple other modules
+Not directly part of core functionality
+Often cross-cutting concerns (logging, config, testing)
+Module 17: Documentation Generator
+Purpose: Produces living documentation that syncs with implementation using templates.
+
+Deliverables:
+
+core/doc_generator.py - Template-based doc creation
+Templates for README, healthcheck, policy snapshot
+Markdown rendering utilities
+Support Module Identification Criteria:
+
+Provides utilities or helpers
+Used by multiple other modules
+Not directly part of core functionality
+Often cross-cutting concerns (logging, config, testing)
+Module 18: Testing Framework
+Purpose: Validates plugins and core in isolation with fixtures and per-plugin templates.
+
+Deliverables:
+
+tests/test_orchestrator.py - Core orchestrator tests
+tests/test_plugin_loader.py - Plugin loading tests
+tests/test_lifecycle_events.py - Event dispatch tests
+Per-plugin test templates (e.g., test_file_classifier.py)
+Mock event fixtures
+Support Module Identification Criteria:
+
+Provides utilities or helpers
+Used by multiple other modules
+Not directly part of core functionality
+Often cross-cutting concerns (logging, config, testing)
+Section 4: Complete Deliverables Summary Table
+Module	Core Files	Generated Artifacts	Config Files	Tests
+Module 1: Pipeline Orchestrator	core/orchestrator.py, core/event_dispatcher.py, core/plugin_loader.py	Event schemas, startup/shutdown scripts	-	tests/test_orchestrator.py, tests/test_lifecycle_events.py
+Module 2: Ledger Manager	core/ledger_writer.py, core/ledger_query.py, core/ulid_generator.py	.runs/ledger.jsonl, rollback index	ledger_schema.json (JSON Schema)	tests/test_ledger.py
+Module 3: Git Operations Manager	core/git_ops.py, core/branch_manager.py, core/snapshot_tagger.py, core/merge_executor.py	Tags/snapshots	.gitattributes, .gitconfig, policy_pack.json	tests/test_git_ops.py
+Module 4: Sync Guardian	core/sync_auditor.py, core/sync_reconciler.py	.runs/sync/<ULID>.json (sync reports)	sync_policy.yaml	tests/test_sync.py
+Module 5: Plugin Registry & Loader	core/plugin_registry.py, core/plugin_validator.py	-	plugins/registry.json	tests/test_registry.py
+Module 6: Validator Engine	core/validate_plugin.py, core/contract_checker.py, validation rules library	Validation reports	validation_rules.json/yaml, OPERATING_CONTRACT.md	tests/test_validator.py
+Module 7: Generator/Scaffold Engine	core/generate_plugin_scaffold.py, core/templates/	manifest.json, policy_snapshot.json, ledger_contract.json, README_PLUGIN.md, healthcheck.md, handler.py/.ps1	-	tests/test_generator.py
+Module 8: Policy Enforcement Engine	core/policy_enforcer.py	-	core/policy_pack.json	tests/test_policy.py
+Module 9: File Classifier/Organizer	plugins/file-classifier/handler.py	Proposals (move/dedupe)	plugins/file-classifier/module_registry.json, manifest.json	tests/test_file_classifier.py
+Module 10: Conflict Resolver Suite	plugins/conflict-resolver-ours/handler.py, plugins/conflict-resolver-theirs/handler.py, plugins/conflict-resolver-smart-merge/handler.py	Proposals (resolution)	strategy_priority.yaml, conflict patterns	tests/test_conflicts.py
+Module 11: Pre-Merge Quality Gates	plugins/pre-merge-lint/handler.py, plugins/pre-merge-test/handler.py, plugins/pre-merge-format/handler.py	Gate result proposals	gate_thresholds.yaml	tests/test_gates.py
+Module 12: Post-Merge Validators	plugins/post-merge-notify/handler.py, plugins/post-merge-validate/handler.py, plugins/post-merge-cleanup/handler.py	Notifications, cleanup proposals	notifier configs	-
+Module 13: Quarantine Manager	plugins/quarantine-handler/handler.py	Quarantine plans, review instructions	Quarantine directory structure	-
+Module 14: Auto-Fix/Format Suite	plugins/auto-fix-imports/handler.py, plugins/auto-fix-whitespace/handler.py, plugins/auto-fix-formatting/handler.py	Auto-fix diffs	Tool configs (isort, black, ruff)	-
+Module 15: Observability/Metrics	plugins/observability-health/handler.py, plugins/observability-metrics/handler.py	Dashboard exports	Alert threshold configuration	-
+Module 16: Module Registry	core/registry_updater.py	-	core/module_registry.json	-
+Module 17: Documentation Generator	core/doc_generator.py	README, healthcheck, policy snapshots	Doc templates	-
+Module 18: Testing Framework	tests/*	-	-	All test files listed above
+Section 5: Module Dependencies
+Pipeline Orchestrator ├── Plugin Registry & Loader (loads and resolves enabled plugins) ├── Ledger Manager (writes append-only audit trail) ├── Git Operations Manager (executes approved Git actions) ├── Policy Enforcement Engine (validates proposals before execution) └── Event Dispatcher → All Plugins (dispatch per lifecycle event)
+
+Sync Guardian ├── Git Operations Manager (fetch/merge and branch reconciliation) └── Ledger Manager (logs sync actions and outcomes)
+
+Generator/Scaffold Engine ├── Validator Engine (validates generated artifacts) └── Module Registry (uses registry knowledge for classification hints)
+
+All Plugins ├── Ledger Manager (record operations via core interface) └── Policy Enforcement Engine (ensure allowed actions per event)
+
+Plugin Family ├── Shared dependencies: Policy pack, Operating Contract, Registry data └── Integration points: Event dispatcher, Git ops (via core), Ledger logging
+
+Section 6: Integration Points
+External Tool Integration:
+
+Aider + DeepSeek - Invoked by code-editing plugins for automated refactoring and edits
+Claude Code CLI - Used for task planning and codebase analysis by planning/analysis plugins
+Ruff/Black/Pylint - Used by quality gate plugins for linting and formatting checks
+GitHub CLI - Used by Sync Guardian for remote operations (fetch, branch ops, PR sync)
+Data Flows:
+
+File Intake and Organization → Orchestrator detects file (FileDetected) → Dispatches to File Classifier → Classifier proposes move/dedupe → Policy Enforcer validates → Git Ops applies action → Ledger records entry
+Merge Conflict Resolution → Git Ops detects conflict (MergeConflict) → Dispatch to Conflict Resolver Suite → Best proposal selected (e.g., take_ours) → Git Ops applies resolution → Ledger records outcome
+Local/Remote Sync → Sync Guardian audits state → Creates reconciliation branch → Reconciles differences (rebase/merge per policy) → Merges to target → Ledger records with rollback tag
+Pre-Merge Quality Gates → Orchestrator triggers PreMerge → Lint/Test/Format plugins run → Gate results aggregated → Policy Enforcer blocks/allows merge → Git Ops proceeds/aborts → Ledger logs gate outcomes
+Post-Merge Assurance → PostMerge event fired → Post-merge validate/notify/cleanup plugins execute → Notifications sent, temp branches deleted → Metrics emitted → Ledger records and Observability exports dashboards
+Section 7: Architecture Quality Assessment
+This modular architecture ensures:
+
+✅ Clear separation of concerns
+✅ Each module has single responsibility
+✅ Core protected from plugin failures
+✅ Extensibility without core changes
+✅ Complete audit/observability capability
+✅ Deterministic and testable behavior
+Analysis Guidelines Compliance:
+
+Modules identified via data flows, privileged boundaries, and extension points
+Classification into Core, Plugin, and Support tiers
+Deliverables, contracts, and schemas extracted and normalized
+Interfaces shown with typed signatures and JSON schemas
+Consistent naming, numbering (1–18), and formatting across sections
+Interactions, dependencies, and external integrations highlighted
+Output Checklist:
+
+ All modules numbered sequentially
+ Each module has Purpose + Deliverables + Contracts
+ Core/Plugin/Support tiers clearly separated
+ Summary table includes all modules
+ Dependency tree shows relationships
+ Integration points documented
+ 3-5 data flow scenarios described
+ Quality assessment completed
+ Consistent formatting throughout
+ Code blocks properly formatted with syntax highlighting
